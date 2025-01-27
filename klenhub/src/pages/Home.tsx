@@ -87,7 +87,7 @@ export const Home = () => {
                   </div>
                   <div className="mt-4 space-y-1">
                     <h3 className="text-sm tracking-wider">{product.name}</h3>
-                    <p className="text-sm text-gray-600">${product.price.toFixed(2)}</p>
+                    <p className="text-sm text-gray-600">R{product.price.toFixed(2)}</p>
                   </div>
                 </Link>
               </motion.div>
@@ -150,7 +150,7 @@ export const Home = () => {
                   </div>
                   <div className="mt-4 space-y-1">
                     <h3 className="text-sm tracking-wider">{product.name}</h3>
-                    <p className="text-sm text-gray-600">${product.price.toFixed(2)}</p>
+                    <p className="text-sm text-gray-600">R{product.price.toFixed(2)}</p>
                   </div>
                 </Link>
               </motion.div>
