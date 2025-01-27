@@ -151,7 +151,7 @@ export const Cart = () => {
               <div className="space-y-4 text-sm">
                 <div className="flex justify-between tracking-[0.1em]">
                   <span>Subtotal</span>
-                  <span>${subtotal.toFixed(2)}</span>
+                  <span>R{subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between tracking-[0.1em]">
                   <span>Shipping</span>
