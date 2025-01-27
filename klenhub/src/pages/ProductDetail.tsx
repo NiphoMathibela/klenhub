@@ -107,15 +107,15 @@ export const ProductDetail = () => {
                 {product.salePrice ? (
                   <>
                     <span className="text-xl tracking-[0.1em] text-red-600">
-                      ${product.salePrice.toFixed(2)}
+                      R{product.salePrice.toFixed(2)}
                     </span>
                     <span className="text-xl tracking-[0.1em] text-gray-400 line-through">
-                      ${product.price.toFixed(2)}
+                      R{product.price.toFixed(2)}
                     </span>
                   </>
                 ) : (
                   <span className="text-xl tracking-[0.1em]">
-                    ${product.price.toFixed(2)}
+                    R{product.price.toFixed(2)}
                   </span>
                 )}
               </div>
