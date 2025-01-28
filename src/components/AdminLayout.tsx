@@ -42,7 +42,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
       {/* Sidebar */}
       <aside
         className={`fixed top-0 left-0 h-full bg-white shadow-sm transition-all duration-300 z-20
-          ${isSidebarOpen ? 'w-64' : 'w-20'} 
+          ${isSidebarOpen ? 'w-64' : 'w-16'} 
           md:w-64 lg:relative lg:translate-x-0
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
@@ -73,7 +73,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
                   }`}
               >
                 {item.icon}
-                <span className={`text-sm tracking-[0.1em] ${!isSidebarOpen && 'lg:hidden'}`}>
+                <span className={`text-sm tracking-[0.1em] ${!isSidebarOpen && 'hidden'}`}>
                   {item.label.toUpperCase()}
                 </span>
               </Link>
@@ -84,7 +84,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
           <div className="p-4">
             <button className="w-full flex items-center space-x-4 px-4 py-3 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
               <LogOut className="h-5 w-5" />
-              <span className={`text-sm tracking-[0.1em] ${!isSidebarOpen && 'lg:hidden'}`}>
+              <span className={`text-sm tracking-[0.1em] ${!isSidebarOpen && 'hidden'}`}>
                 LOGOUT
               </span>
             </button>
