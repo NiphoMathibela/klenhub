@@ -43,7 +43,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
       <aside
         className={`fixed top-0 left-0 h-full bg-white shadow-sm transition-all duration-300 z-20
           ${isSidebarOpen ? 'w-64' : 'w-20'} 
-          lg:relative lg:translate-x-0
+          md:w-64 lg:relative lg:translate-x-0
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
         <div className="flex flex-col h-full">
