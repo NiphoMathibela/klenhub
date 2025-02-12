@@ -10,10 +10,12 @@ export const Navbar = () => {
   const { state } = useCart();
 
   const categories = [
-    { name: 'SPRING/SUMMER 2024', path: '/category/spring-summer' },
-    { name: 'NEW ARRIVALS', path: '/category/new-arrivals' },
-    { name: 'COLLECTIONS', path: '/category/collections' },
-    { name: 'EDITORIAL', path: '/category/editorial' },
+    { name: 'SALE', path: '/category/sale' },
+    { name: 'NEW', path: '/category/new' },
+    { name: 'TOPS', path: '/category/tops' },
+    { name: 'BOTTOMS', path: '/category/bottoms' },
+    { name: 'ACCESSORIES', path: '/category/accessories' },
+    { name: 'SHOES', path: '/category/shoes' },
   ];
 
   return (
