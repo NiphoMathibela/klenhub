@@ -1,10 +1,11 @@
 import React from 'react';
 
-const SizeGuide = () => {
+const SizeGuide: React.FC = () => {
+  const sizeGuideDetails = "Size guide details will be provided here.";
   return (
     <div>
       <h1>Size Guide</h1>
-      <p>Details about size guide will be provided here.</p>
+      <p>{sizeGuideDetails}</p>
     </div>
   );
 };

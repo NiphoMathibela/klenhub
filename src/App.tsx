@@ -42,6 +42,8 @@ const App = () => {
               <Routes>
                 <Route index element={<Home />} />
                 <Route path="category/:category" element={<CategoryPage />} />
+                <Route path="login" element={<Login />} />
+                <Route path="register" element={<Register />} />
                 <Route path="product/:id" element={<ProductDetail />} />
                 <Route path="cart" element={<Cart />} />
                 <Route path="shipping" element={<ShippingInfo />} />

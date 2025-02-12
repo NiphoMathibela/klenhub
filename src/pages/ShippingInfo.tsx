@@ -1,10 +1,11 @@
 import React from 'react';
 
-const ShippingInfo = () => {
+const ShippingInfo: React.FC = () => {
+  const shippingDetails = "Shipping details will be provided here.";
   return (
     <div>
       <h1>Shipping Information</h1>
-      <p>Details about shipping will be provided here.</p>
+      <p>{shippingDetails}</p>
     </div>
   );
 };
