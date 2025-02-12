@@ -74,6 +74,10 @@ export const Footer = () => {
                   Contact Us
                 </Link>
               </li>
+
+
+
+
             </ul>
           </motion.div>
 

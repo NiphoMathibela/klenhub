@@ -1,6 +1,9 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
+import ShippingInfo from './pages/ShippingInfo';
+import SizeGuide from './pages/SizeGuide';
+import Contact from './pages/Contact';
 import { Footer } from './components/Footer';
 import { AdminLayout } from './components/AdminLayout';
 import { Home } from './pages/Home';
@@ -41,6 +44,9 @@ const App = () => {
                 <Route path="category/:category" element={<CategoryPage />} />
                 <Route path="product/:id" element={<ProductDetail />} />
                 <Route path="cart" element={<Cart />} />
+                <Route path="shipping" element={<ShippingInfo />} />
+                <Route path="size-guide" element={<SizeGuide />} />
+                <Route path="contact" element={<Contact />} />
               </Routes>
               <Footer />
             </CartProvider>
