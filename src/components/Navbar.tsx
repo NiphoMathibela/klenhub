@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingBag, Search, Menu, X } from 'lucide-react';
+import { ShoppingBag, Search, Menu, X, User } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { motion } from 'framer-motion';
 
@@ -48,6 +48,11 @@ export const Navbar = () => {
           </Link>
 
           <div className="flex-1 flex justify-end items-center space-x-6">
+            <motion.div whileHover={{ scale: 1.1 }}>
+              <Link to="/login" className="p-2 relative hover:text-gray-600 transition-colors">
+                <User className="h-4 w-4" />
+              </Link>
+            </motion.div>
             <motion.button
               whileHover={{ scale: 1.1 }}
               onClick={() => setIsSearchOpen(!isSearchOpen)}
