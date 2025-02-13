@@ -16,7 +16,7 @@ const Login: React.FC = () => {
             <input
               type="email"
               id="email"
-              className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 focus:outline-none focus:ring focus:ring-black"
               placeholder="Enter your email"
               required
             />
@@ -26,7 +26,7 @@ const Login: React.FC = () => {
             <input
               type="password"
               id="password"
-              className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 focus:outline-none focus:ring focus:ring-black"
               placeholder="Enter your password"
               required
             />
