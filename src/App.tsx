@@ -14,6 +14,8 @@ import { Dashboard } from './pages/admin/Dashboard';
 import { Products } from './pages/admin/Products';
 import { Orders } from './pages/admin/Orders';
 import { CartProvider } from './context/CartContext';
+import Login from './pages/Login';
+import Register from './pages/Register';
 
 const App = () => {
   return (

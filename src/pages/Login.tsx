@@ -9,7 +9,7 @@ const Login: React.FC = () => {
   return (
     <div className="flex items-center justify-center h-screen bg-gray-100">
       <div className="bg-white p-8 rounded shadow-md w-96">
-        <h2 className="text-2xl font-bold mb-6">Login</h2>
+        <h2 className="text-2xl mb-6">LOGIN</h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2" htmlFor="email">Email</label>
@@ -31,8 +31,8 @@ const Login: React.FC = () => {
               required
             />
           </div>
-          <button type="submit" className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 transition">
-            Login
+          <button type="submit" className="w-full py-4 bg-black text-white text-sm tracking-[0.2em] hover:bg-gray-900 transition-colors">
+            LOGIN
           </button>
         </form>
       </div>
