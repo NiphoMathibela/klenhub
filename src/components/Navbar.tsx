@@ -130,14 +130,15 @@ export const Navbar = () => {
           transition={{ duration: 0.2 }}
           className="absolute left-0 right-0 bg-white border-t p-6"
         >
+          <div className='w-4 right-0 my-2' onClick={() => setIsSearchOpen(false)}><X/></div>
           <div className="relative">
             <input
               type="text"
               placeholder="Search products..."
-              className="w-full px-4 py-3 bg-gray-50 focus:outline-none transition-all duration-300 focus:bg-gray-100"
+              className="w-full px-4 py-3 bg-gray-50 focus:outline-none transition-all duration-300 focus:bg-gray-100 focus:ring-1 focus:ring-black"
               autoFocus
             />
-            <button className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
+            <button className="absolute right-2 top-1/2 transform -translate-y-1/2 py-2 px-4 bg-black text-white hover:bg-gray-900 transition">
               Search
             </button>
           </div>
