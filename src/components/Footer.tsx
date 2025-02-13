@@ -86,9 +86,9 @@ const handleNewsletterSubmit = (e: React.FormEvent) => {
                 <input
                 type="email"
                 placeholder="Enter your email"
-                className="w-full p-2 rounded border border-gray-400"
+                className="w-full p-2 border border-black focus:ring-black"
               />
-                <button type="submit" className="w-full bg-gray-800 text-white p-2 hover:bg-none">
+                <button type="submit" className="w-full bg-black hover:bg-gray-900 border text-white p-2 hover:bg-none">
                 Subscribe
               </button>
             </form>
