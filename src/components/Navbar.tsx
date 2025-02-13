@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingBag, Search, Menu, X } from 'lucide-react';
+import { ShoppingBag, Search, Menu, X, User } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { motion } from 'framer-motion';
 
@@ -10,10 +10,12 @@ export const Navbar = () => {
   const { state } = useCart();
 
   const categories = [
-    { name: 'SPRING/SUMMER 2024', path: '/category/spring-summer' },
-    { name: 'NEW ARRIVALS', path: '/category/new-arrivals' },
-    { name: 'COLLECTIONS', path: '/category/collections' },
-    { name: 'EDITORIAL', path: '/category/editorial' },
+    { name: 'SALE', path: '/category/sale' },
+    { name: 'NEW', path: '/category/new' },
+    { name: 'TOPS', path: '/category/tops' },
+    { name: 'BOTTOMS', path: '/category/bottoms' },
+    { name: 'ACCESSORIES', path: '/category/accessories' },
+    { name: 'SHOES', path: '/category/shoes' },
   ];
 
   return (
@@ -46,6 +48,11 @@ export const Navbar = () => {
           </Link>
 
           <div className="flex-1 flex justify-end items-center space-x-6">
+            <motion.div whileHover={{ scale: 1.1 }}>
+              <Link to="/login" className="p-2 relative hover:text-gray-600 transition-colors">
+                <User className="h-4 w-4" />
+              </Link>
+            </motion.div>
             <motion.button
               whileHover={{ scale: 1.1 }}
               onClick={() => setIsSearchOpen(!isSearchOpen)}
@@ -123,12 +130,18 @@ export const Navbar = () => {
           transition={{ duration: 0.2 }}
           className="absolute left-0 right-0 bg-white border-t p-6"
         >
-          <input
-            type="text"
-            placeholder="Search products..."
-            className="w-full px-4 py-3 bg-gray-50 focus:outline-none transition-all duration-300 focus:bg-gray-100"
-            autoFocus
-          />
+          <div className='w-4 right-0 my-2' onClick={() => setIsSearchOpen(false)}><X/></div>
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search products..."
+              className="w-full px-4 py-3 bg-gray-50 focus:outline-none transition-all duration-300 focus:bg-gray-100 focus:ring-1 focus:ring-black"
+              autoFocus
+            />
+            <button className="absolute right-2 top-1/2 transform -translate-y-1/2 py-2 px-4 bg-black text-white hover:bg-gray-900 transition">
+              Search
+            </button>
+          </div>
         </motion.div>
       </div>
     </motion.nav>

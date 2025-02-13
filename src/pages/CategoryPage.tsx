@@ -10,11 +10,12 @@ export const CategoryPage = () => {
   const [sortOption, setSortOption] = useState<SortOption>('featured');
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>('all');
 
-  const categoryProducts = category === 'all' 
+    const categoryProducts = category === 'all' || category === 'new' || category === 'tops' || category === 'bottoms' || category === 'accessories' || category === 'shoes'
+
     ? products 
     : products.filter(product => product.category === category);
 
-  const subCategories = ['all', ...new Set(categoryProducts.map(p => p.subCategory))];
+  const subCategories = ['all', 'new', 'tops', 'bottoms', 'accessories', 'shoes', ...new Set(categoryProducts.map(p => p.subCategory))];
   
   const filteredProducts = selectedSubCategory === 'all'
     ? categoryProducts

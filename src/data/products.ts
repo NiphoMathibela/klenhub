@@ -7,7 +7,7 @@ export const products: Product[] = [
     name: 'Cardigan',
     brand: 'KLEN_HUB',
     price: 1890.00,
-    category: 'spring-summer',
+    category: 'new',
     subCategory: 'outerwear',
     images: [
       '/cardigan.jpg',
@@ -22,7 +22,7 @@ export const products: Product[] = [
     name: 'Represent Tee',
     brand: 'KLEN_HUB',
     price: 890.00,
-    category: 'spring-summer',
+    category: 'new',
     subCategory: 'outwear',
     images: [
       '/respresentFront.jpg',
@@ -38,7 +38,7 @@ export const products: Product[] = [
     name: 'Drift Tee',
     brand: 'KLEN_HUB',
     price: 2290.00,
-    category: 'new-arrivals',
+    category: 'new',
     subCategory: 'outwear',
     images: [
       '/driftfront.jpg',
@@ -54,7 +54,7 @@ export const products: Product[] = [
     brand: 'KLEN_HUB',
     price: 2790.00,
     salePrice: 2290.00,
-    category: 'new-arrivals',
+    category: 'new',
     subCategory: 'outerwear',
     images: [
       '/bhude1.jpg',
@@ -72,7 +72,7 @@ export const products: Product[] = [
     name: 'Gallery Dept Striped Tee',
     brand: 'KLEN_HUB',
     price: 990.00,
-    category: 'collections',
+    category: 'tops',
     subCategory: 'outwear',
     images: [
       '/gallerytee.jpg'
@@ -86,7 +86,7 @@ export const products: Product[] = [
     name: 'Represent Tee',
     brand: 'KLEN_HUB',
     price: 1690.00,
-    category: 'collections',
+    category: 'bottoms',
     subCategory: 'outwear',
     images: [
       '/representbel.jpg'
@@ -101,7 +101,7 @@ export const products: Product[] = [
     name: 'Represrnt Tee BelStaff',
     brand: 'KLEN_HUB',
     price: 900.00,
-    category: 'editorial',
+    category: 'accessories',
     subCategory: 'outwear',
     images: [
       '/representbelBlack.jpg',
@@ -116,7 +116,7 @@ export const products: Product[] = [
     name: 'LV Trainer',
     brand: 'KLEN_HUB',
     price: 4290.00,
-    category: 'editorial',
+    category: 'shoes',
     subCategory: 'shoes',
     images: [
       '/lv1.jpg',
