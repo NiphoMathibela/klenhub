@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const Register: React.FC = () => {
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -43,7 +44,7 @@ const Register: React.FC = () => {
           </div>
 
           <div className='py-4'>
-            <p className='text-gray-700'>Already have an account? <span className='text-black font-bold cursor-pointer'>LOGIN</span></p>
+            <p className='text-gray-700'>Already have an account? <span className='text-black font-bold cursor-pointer'><Link to="/login">LOGIN</Link></span></p>
           </div>
 
           <button type="submit" className="w-full py-4 bg-black text-white text-sm tracking-[0.2em] hover:bg-gray-900 transition-colors">
