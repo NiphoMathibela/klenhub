@@ -16,7 +16,7 @@ const Register: React.FC = () => {
             <input
               type="text"
               id="username"
-              className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 focus:outline-none focus:ring focus:ring-black"
               placeholder="Enter your username"
               required
             />
@@ -41,6 +41,11 @@ const Register: React.FC = () => {
               required
             />
           </div>
+
+          <div className='py-4'>
+            <p className='text-gray-700'>Already have an account? <span className='text-black font-bold cursor-pointer'>LOGIN</span></p>
+          </div>
+
           <button type="submit" className="w-full py-4 bg-black text-white text-sm tracking-[0.2em] hover:bg-gray-900 transition-colors">
             REGISTER
           </button>
