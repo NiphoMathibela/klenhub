@@ -31,6 +31,10 @@ const Login: React.FC = () => {
               required
             />
           </div>
+
+          <div className='py-4'>
+            <p className='text-gray-700'>Don't have an account? <span className='text-black font-bold cursor-pointer'>REGISTER</span></p>
+          </div>
           <button type="submit" className="w-full py-4 bg-black text-white text-sm tracking-[0.2em] hover:bg-gray-900 transition-colors">
             LOGIN
           </button>
