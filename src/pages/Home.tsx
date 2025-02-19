@@ -1,30 +1,80 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ProductGrid } from '../components/ProductGrid';
 import { Hero } from '../components/Hero';
-import { products } from '../data/products';
-import { SortOption } from '../types';
+import { SortOption, Product } from '../types';
+import { productsService } from '../services/products';
 
 export const Home = () => {
   const { category } = useParams();
   const [sortOption, setSortOption] = useState<SortOption>('featured');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [trendingProducts, setTrendingProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
 
-  // Get featured products (marked as featured in data)
-  const featuredProducts = products
-    .filter(product => product.featured)
-    .slice(0, 4);
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-  // Get trending products (most expensive products for demo)
-  const trendingProducts = [...products]
-    .sort((a, b) => b.price - a.price)
-    .slice(0, 4);
+        // Fetch featured products
+        const featured = await productsService.getFeatured();
+        setFeaturedProducts(featured.slice(0, 4));
+
+        // Fetch all products and sort by price for trending
+        const allProducts = await productsService.getAll();
+        const trending = [...allProducts]
+          .sort((a, b) => b.price - a.price)
+          .slice(0, 4);
+        setTrendingProducts(trending);
+        setProducts(allProducts);
+      } catch (err) {
+        setError('Failed to load products. Please try again later.');
+        console.error('Error fetching products:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   const fadeInUp = {
     initial: { opacity: 0, y: 20 },
     animate: { opacity: 1, y: 0 },
     transition: { duration: 0.5 }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black mx-auto"></div>
+          <p className="mt-4 text-gray-500 tracking-[0.1em]">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 tracking-[0.1em]">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-6 py-2 bg-black text-white text-sm tracking-[0.2em] hover:bg-gray-900 transition-colors"
+          >
+            RETRY
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
@@ -51,48 +101,14 @@ export const Home = () => {
             <motion.div {...fadeInUp}>
               <Link 
                 to="/category/all"
-                className="text-sm tracking-wider hover:opacity-70 transition-opacity"
+                className="text-sm tracking-[0.1em] text-gray-600 hover:text-black transition-colors"
               >
-                VIEW ALL PRODUCTS
+                VIEW ALL
               </Link>
             </motion.div>
           </motion.div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {featuredProducts.map((product, index) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <Link 
-                  to={`/product/${product.id}`}
-                  className="group block"
-                >
-                  <div className="relative aspect-[3/4] overflow-hidden bg-gray-100">
-                    <motion.img
-                      whileHover={{ scale: 1.05 }}
-                      transition={{ duration: 0.6 }}
-                      src={product.images[0]}
-                      alt={product.name}
-                      className="w-full h-full object-cover"
-                    />
-                    {product.onSale && (
-                      <div className="absolute top-4 left-4 bg-black text-white px-4 py-1 text-xs tracking-wider">
-                        SALE
-                      </div>
-                    )}
-                  </div>
-                  <div className="mt-4 space-y-1">
-                    <h3 className="text-sm tracking-wider">{product.name}</h3>
-                    <p className="text-sm text-gray-600">R{product.price.toFixed(2)}</p>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
+
+          <ProductGrid products={featuredProducts} />
         </div>
       </section>
 
@@ -109,53 +125,19 @@ export const Home = () => {
               {...fadeInUp}
               className="text-3xl font-light tracking-[0.2em]"
             >
-              TRENDING NOW
+              TRENDING
             </motion.h2>
             <motion.div {...fadeInUp}>
               <Link 
                 to="/category/all"
-                className="text-sm tracking-wider hover:opacity-70 transition-opacity"
+                className="text-sm tracking-[0.1em] text-gray-600 hover:text-black transition-colors"
               >
-                VIEW ALL PRODUCTS
+                VIEW ALL
               </Link>
             </motion.div>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {trendingProducts.map((product, index) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <Link 
-                  to={`/product/${product.id}`}
-                  className="group block"
-                >
-                  <div className="relative aspect-[3/4] overflow-hidden bg-gray-100">
-                    <motion.img
-                      whileHover={{ scale: 1.05 }}
-                      transition={{ duration: 0.6 }}
-                      src={product.images[0]}
-                      alt={product.name}
-                      className="w-full h-full object-cover"
-                    />
-                    {product.onSale && (
-                      <div className="absolute top-4 left-4 bg-black text-white px-4 py-1 text-xs tracking-wider">
-                        SALE
-                      </div>
-                    )}
-                  </div>
-                  <div className="mt-4 space-y-1">
-                    <h3 className="text-sm tracking-wider">{product.name}</h3>
-                    <p className="text-sm text-gray-600">R{product.price.toFixed(2)}</p>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
+          <ProductGrid products={trendingProducts} />
         </div>
       </section>
 
@@ -169,7 +151,7 @@ export const Home = () => {
             <select
               value={sortOption}
               onChange={(e) => setSortOption(e.target.value as SortOption)}
-              className="px-4 py-2 bg-transparent border-b border-gray-200 focus:outline-none text-sm tracking-wider"
+              className="px-4 py-2 bg-transparent border-b border-gray-200 focus:outline-none text-sm tracking-[0.2em]"
             >
               <option value="featured">FEATURED</option>
               <option value="price-asc">PRICE: LOW TO HIGH</option>
@@ -186,3 +168,5 @@ export const Home = () => {
     </div>
   );
 };
+
+export default Home;

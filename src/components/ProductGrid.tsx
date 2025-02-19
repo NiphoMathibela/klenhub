@@ -13,14 +13,16 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ products, sortOption }
     const sortedProducts = [...products];
     switch (option) {
       case 'price-asc':
-        return sortedProducts.sort((a, b) => (a.salePrice || a.price) - (b.salePrice || b.price));
+        return sortedProducts.sort((a, b) => a.price - b.price);
       case 'price-desc':
-        return sortedProducts.sort((a, b) => (b.salePrice || b.price) - (a.salePrice || b.price));
+        return sortedProducts.sort((a, b) => b.price - a.price);
       case 'newest':
-        return sortedProducts.reverse(); // Assuming newer products are added to the end of the array
+        return sortedProducts.sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
       case 'featured':
       default:
-        return sortedProducts.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+        return sortedProducts.sort((a, b) => b.stock - a.stock); // Sort by stock as a proxy for featured
     }
   };
 

@@ -5,14 +5,24 @@ import { Minus, Plus, X } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 
 export const Cart = () => {
-  const { state, dispatch } = useCart();
+  const { state, updateQuantity: updateCartQuantity, removeFromCart: removeCartItem } = useCart();
 
-  const updateQuantity = (id: string, quantity: number) => {
-    dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity } });
+  const handleUpdateQuantity = async (productId: string, size: string, quantity: number) => {
+    try {
+      if (quantity > 0) {
+        await updateCartQuantity(productId, size, quantity);
+      }
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+    }
   };
 
-  const removeFromCart = (id: string) => {
-    dispatch({ type: 'REMOVE_FROM_CART', payload: id });
+  const handleRemoveFromCart = async (productId: string, size: string) => {
+    try {
+      await removeCartItem(productId, size);
+    } catch (error) {
+      console.error('Error removing item from cart:', error);
+    }
   };
 
   const subtotal = state.items.reduce(
@@ -28,6 +38,22 @@ export const Cart = () => {
     animate: { opacity: 1 },
     transition: { duration: 0.5 }
   };
+
+  if (state.loading) {
+    return (
+      <motion.div 
+        className="min-h-screen pt-32 pb-24 flex items-center justify-center"
+        initial="initial"
+        animate="animate"
+        variants={fadeIn}
+      >
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black mx-auto"></div>
+          <p className="mt-4 text-gray-500 tracking-[0.1em]">Loading your cart...</p>
+        </div>
+      </motion.div>
+    );
+  }
 
   if (state.items.length === 0) {
     return (
@@ -61,124 +87,91 @@ export const Cart = () => {
       variants={fadeIn}
     >
       <div className="max-w-[1800px] mx-auto px-6 lg:px-12">
-        <h1 className="text-3xl tracking-[0.2em] font-light mb-16">YOUR CART</h1>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
-          {/* Cart Items */}
-          <div className="lg:col-span-8 space-y-8">
+        <h1 className="text-3xl tracking-[0.2em] font-light text-center mb-12">YOUR CART</h1>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+          <div className="lg:col-span-8">
             {state.items.map((item) => (
-              <motion.div
-                key={`${item.product.id}-${item.size}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="grid grid-cols-[120px,1fr] sm:grid-cols-[180px,1fr] gap-8 pb-8 border-b border-gray-200"
-              >
-                {/* Product Image */}
-                <Link to={`/product/${item.product.id}`} className="aspect-[3/4] bg-gray-50">
-                  <img
-                    src={item.product.images[0]}
+              <div key={`${item.product.id}-${item.size}`} className="flex gap-8 py-8 border-b">
+                <div className="w-24 h-32 bg-gray-100">
+                  <img 
+                    src={item.product.images[0]} 
                     alt={item.product.name}
-                    className="w-full h-full object-cover object-center"
+                    className="w-full h-full object-cover"
                   />
-                </Link>
-
-                {/* Product Details */}
-                <div className="flex flex-col justify-between py-2">
-                  <div className="space-y-1">
-                    <Link 
-                      to={`/product/${item.product.id}`}
-                      className="block text-sm tracking-[0.1em] hover:text-gray-600 transition-colors"
+                </div>
+                
+                <div className="flex-1">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-lg font-medium">{item.product.name}</h3>
+                      <p className="text-gray-500 mt-1">Size: {item.size}</p>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveFromCart(item.product.id, item.size)}
+                      className="text-gray-400 hover:text-black transition-colors"
                     >
-                      {item.product.name}
-                    </Link>
-                    <p className="text-xs tracking-[0.1em] text-gray-500">{item.product.brand}</p>
-                    <p className="text-xs tracking-[0.1em] text-gray-500">Size: {item.size}</p>
+                      <X size={20} />
+                    </button>
                   </div>
-
-                  <div className="flex justify-between items-end">
-                    <div className="flex items-center space-x-4">
+                  
+                  <div className="mt-4 flex justify-between items-center">
+                    <div className="flex items-center gap-4">
                       <button
-                        onClick={() => updateQuantity(item.product.id, Math.max(1, item.quantity - 1))}
-                        className="p-1 hover:text-gray-600 transition-colors"
+                        onClick={() => handleUpdateQuantity(item.product.id, item.size, item.quantity - 1)}
+                        className="text-gray-400 hover:text-black transition-colors"
+                        disabled={item.quantity <= 1}
                       >
-                        <Minus className="h-4 w-4" />
+                        <Minus size={20} />
                       </button>
-                      <span className="text-sm tracking-[0.1em]">{item.quantity}</span>
+                      <span className="w-8 text-center">{item.quantity}</span>
                       <button
-                        onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                        className="p-1 hover:text-gray-600 transition-colors"
+                        onClick={() => handleUpdateQuantity(item.product.id, item.size, item.quantity + 1)}
+                        className="text-gray-400 hover:text-black transition-colors"
                       >
-                        <Plus className="h-4 w-4" />
+                        <Plus size={20} />
                       </button>
                     </div>
-
-                    <div className="flex items-center space-x-6">
-                      <div className="text-right">
-                        {item.product.salePrice ? (
-                          <>
-                            <p className="text-sm tracking-[0.1em] text-red-600">
-                              <Ri:art></Ri:art>{(item.product.salePrice * item.quantity).toFixed(2)}
-                            </p>
-                            <p className="text-xs tracking-[0.1em] text-gray-400 line-through">
-                              R{(item.product.price * item.quantity).toFixed(2)}
-                            </p>
-                          </>
-                        ) : (
-                          <p className="text-sm tracking-[0.1em]">
-                            R{(item.product.price * item.quantity).toFixed(2)}
-                          </p>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => removeFromCart(item.product.id)}
-                        className="p-1 text-gray-400 hover:text-black transition-colors"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Order Summary */}
-          <div className="lg:col-span-4">
-            <div className="bg-gray-50 p-8 space-y-6">
-              <h2 className="text-lg tracking-[0.1em]">ORDER SUMMARY</h2>
-              
-              <div className="space-y-4 text-sm">
-                <div className="flex justify-between tracking-[0.1em]">
-                  <span>Subtotal</span>
-                  <span>R{subtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between tracking-[0.1em]">
-                  <span>Shipping</span>
-                  <span>{shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}</span>
-                </div>
-                {shipping > 0 && (
-                  <p className="text-xs text-gray-500 tracking-[0.05em]">
-                    Free shipping on orders over R800
-                  </p>
-                )}
-                <div className="pt-4 border-t border-gray-200">
-                  <div className="flex justify-between tracking-[0.1em] font-medium">
-                    <span>Total</span>
-                    <span>R{total.toFixed(2)}</span>
+                    <p className="font-medium">
+                      ${((item.product.salePrice || item.product.price) * item.quantity).toFixed(2)}
+                    </p>
                   </div>
                 </div>
               </div>
-
-              <button className="w-full py-4 bg-black text-white text-sm tracking-[0.2em] hover:bg-gray-900 transition-colors">
-                PROCEED TO CHECKOUT
-              </button>
-
-              <Link 
-                to="/category/all"
-                className="block text-center text-sm tracking-[0.1em] text-gray-600 hover:text-black transition-colors"
+            ))}
+          </div>
+          
+          <div className="lg:col-span-4">
+            <div className="bg-gray-50 p-8">
+              <h2 className="text-xl font-medium mb-6">Order Summary</h2>
+              
+              <div className="space-y-4">
+                <div className="flex justify-between">
+                  <span>Subtotal</span>
+                  <span>${subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Shipping</span>
+                  <span>{shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}</span>
+                </div>
+                <div className="border-t pt-4">
+                  <div className="flex justify-between font-medium">
+                    <span>Total</span>
+                    <span>${total.toFixed(2)}</span>
+                  </div>
+                  {shipping > 0 && (
+                    <p className="text-sm text-gray-500 mt-2">
+                      Add ${(200 - subtotal).toFixed(2)} more to get free shipping
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              <Link
+                to="/checkout"
+                className="block w-full text-center bg-black text-white py-4 mt-8 text-sm tracking-[0.2em] hover:bg-gray-900 transition-colors"
               >
-                Continue Shopping
+                PROCEED TO CHECKOUT
               </Link>
             </div>
           </div>
@@ -187,3 +180,5 @@ export const Cart = () => {
     </motion.div>
   );
 };
+
+export default Cart;
