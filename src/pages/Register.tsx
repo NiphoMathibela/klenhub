@@ -1,16 +1,35 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Register: React.FC = () => {
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const [name, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const { register } = useAuth();
+
+  const navigate = useNavigate();
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // Handle registration logic here
+    setError('');
+    
+    try {
+      await register(name, email, password);
+
+      navigate('/');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to register. Please try again.');
+
+    }
   };
 
   return (
     <div className="flex items-center justify-center h-screen bg-gray-100">
       <div className="bg-white p-8 rounded shadow-md w-96">
         <h2 className="text-2xl font-bold mb-6">REGISTER</h2>
+        {error && <div className="mb-4 text-red-500">{error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2" htmlFor="username">Username</label>
@@ -20,6 +39,8 @@ const Register: React.FC = () => {
               className="w-full px-4 py-2 border border-gray-300 focus:outline-none focus:ring focus:ring-black"
               placeholder="Enter your username"
               required
+              value={name}
+              onChange={(e) => setUsername(e.target.value)}
             />
           </div>
           <div className="mb-4">
@@ -30,6 +51,8 @@ const Register: React.FC = () => {
               className="w-full px-4 py-2 border border-gray-300 focus:outline-none focus:ring focus:ring-black"
               placeholder="Enter your email"
               required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           <div className="mb-4">
@@ -40,6 +63,8 @@ const Register: React.FC = () => {
               className="w-full px-4 py-2 border border-gray-300 focus:outline-none focus:ring focus:ring-black"
               placeholder="Enter your password"
               required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
           </div>
 
