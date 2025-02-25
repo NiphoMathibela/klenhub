@@ -30,9 +30,23 @@ const PORT = process.env.PORT || 3000;
 // Sync database and start server
 const start = async () => {
   try {
-    // Force sync to recreate tables
-    await sequelize.sync({ force: true });
-    console.log('Database connected and tables created successfully');
+    // Sync without force to preserve data
+    await sequelize.sync();
+    console.log('Database connected successfully');
+    
+    // Create admin user if it doesn't exist
+    const User = require('./models/User');
+    const adminExists = await User.findOne({ where: { email: 'admin@example.com' } });
+    
+    if (!adminExists) {
+      await User.create({
+        name: 'Admin User',
+        email: 'admin@example.com',
+        password: 'password123',
+        role: 'admin'
+      });
+      console.log('Admin user created');
+    }
     
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);

@@ -28,20 +28,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (token) {
         try {
           const userData = await authService.getCurrentUser();
+          console.log('Current user data:', userData);
           setUser(userData);
         } catch (error) {
           console.error('Failed to get user data:', error);
           localStorage.removeItem('token');
         }
+      } else {
+        console.log('No token found, user is not authenticated');
       }
     };
 
     initializeAuth();
   }, []);
 
+  // Log user state changes
+  useEffect(() => {
+    console.log('Auth state changed:', {
+      isAuthenticated: !!user,
+      isAdmin: user?.role === 'admin',
+      user
+    });
+  }, [user]);
+
   const register = async (name: string, email: string, password: string) => {
     try {
+      console.log('Attempting to register user:', { name, email });
       const data = await authService.register(name, email, password);
+      console.log('Registration successful:', data);
       localStorage.setItem('token', data.token);
       setUser(data);
     } catch (error) {
@@ -52,7 +66,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
+      console.log('Attempting to login user:', { email });
       const data = await authService.login(email, password);
+      console.log('Login successful:', data);
       localStorage.setItem('token', data.token);
       setUser(data);
     } catch (error) {
@@ -62,6 +78,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
+    console.log('Logging out user:', user?.email);
     setUser(null);
     localStorage.removeItem('token');
   };

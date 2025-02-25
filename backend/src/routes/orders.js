@@ -1,7 +1,7 @@
 const express = require('express');
 const { check } = require('express-validator');
 const { createOrder, getOrders, getOrder, updateOrderStatus } = require('../controllers/orders');
-const { protect, authorize } = require('../middleware/auth');
+const { protect, admin } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -14,12 +14,12 @@ router.post('/', [
   check('total', 'Total must be a positive number').isFloat({ min: 0 })
 ], createOrder);
 
-router.get('/', protect, getOrders);
-router.get('/:id', protect, getOrder);
+router.get('/', protect, admin, getOrders);
+router.get('/:id', protect, admin, getOrder);
 
 router.patch('/:id/status', [
   protect,
-  authorize('admin'),
+  admin,
   check('status', 'Status is required').isIn(['pending', 'processing', 'shipped', 'delivered', 'cancelled'])
 ], updateOrderStatus);
 

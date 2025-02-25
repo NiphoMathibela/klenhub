@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { AuthProvider } from './context/AuthContext';
@@ -39,37 +39,38 @@ const App = () => {
               <Route path="products" element={<Products />} />
             </Route>
 
-            {/* Public routes with navbar and footer */}
+            {/* Public and protected routes */}
             <Route
+              path="/"
               element={
                 <>
                   <Navbar />
                   <main className="min-h-screen">
-                    <Routes>
-                      <Route path="/" element={<Home />} />
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/register" element={<Register />} />
-                      <Route path="/shipping" element={<ShippingInfo />} />
-                      <Route path="/product/:id" element={<ProductDetail />} />
-                      <Route path="/category/:category" element={<CategoryPage />} />
-                      <Route path="/contact" element={<Contact />} />
-                      <Route path="/size-guide" element={<SizeGuide />} />
-                      
-                      {/* Protected customer routes */}
-                      <Route
-                        path="/cart"
-                        element={
-                          <ProtectedRoute>
-                            <Cart />
-                          </ProtectedRoute>
-                        }
-                      />
-                    </Routes>
+                    <Outlet />
                   </main>
                   <Footer />
                 </>
               }
-            />
+            >
+              <Route index element={<Home />} />
+              <Route path="login" element={<Login />} />
+              <Route path="register" element={<Register />} />
+              <Route path="shipping" element={<ShippingInfo />} />
+              <Route path="product/:id" element={<ProductDetail />} />
+              <Route path="category/:category" element={<CategoryPage />} />
+              <Route path="contact" element={<Contact />} />
+              <Route path="size-guide" element={<SizeGuide />} />
+              
+              {/* Protected customer routes */}
+              <Route
+                path="cart"
+                element={
+                  <ProtectedRoute>
+                    <Cart />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
           </Routes>
         </Router>
       </CartProvider>
