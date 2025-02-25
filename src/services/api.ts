@@ -79,6 +79,22 @@ export const productService = {
   },
 };
 
+// Search API
+export const searchService = {
+  // Search products
+  searchProducts: async (query: string) => {
+    try {
+      const response = await axios.get(`${API_URL}/products/search`, {
+        params: { query }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error searching products:', error);
+      throw error;
+    }
+  },
+};
+
 // Order Services
 export const orderService = {
   createOrder: async (orderData: {

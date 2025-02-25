@@ -49,14 +49,12 @@ export const Products = () => {
   const handleCreateProduct = async (productData: Omit<Product, 'id'>) => {
     setIsLoading(true);
     try {
-      const response = await productService.createProduct(productData);
-
-      if (!response.ok) throw new Error('Failed to create product');
-
+      await productService.createProduct(productData);
       await fetchProducts();
       setIsFormOpen(false);
     } catch (error) {
       console.error('Error creating product:', error);
+      alert('Failed to create product. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -67,15 +65,13 @@ export const Products = () => {
 
     setIsLoading(true);
     try {
-      const response = await productService.updateProduct(selectedProduct.id, productData);
-
-      if (!response.ok) throw new Error('Failed to update product');
-
+      await productService.updateProduct(String(selectedProduct.id), productData);
       await fetchProducts();
       setIsFormOpen(false);
       setSelectedProduct(null);
     } catch (error) {
       console.error('Error updating product:', error);
+      alert('Failed to update product. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -85,13 +81,11 @@ export const Products = () => {
     if (!window.confirm('Are you sure you want to delete this product?')) return;
 
     try {
-      const response = await productService.deleteProduct(id);
-
-      if (!response.ok) throw new Error('Failed to delete product');
-
+      await productService.deleteProduct(String(id));
       await fetchProducts();
     } catch (error) {
       console.error('Error deleting product:', error);
+      alert('Failed to delete product. Please try again.');
     }
   };
 

@@ -7,10 +7,12 @@ const {
   createProduct,
   updateProduct,
   deleteProduct,
-  getProductsByCategory
+  getProductsByCategory,
+  searchProducts
 } = require('../controllers/products');
 
 // Public routes
+router.get('/search', searchProducts);
 router.get('/category/:category', getProductsByCategory);
 router.get('/', getProducts);
 router.get('/:id', getProduct);

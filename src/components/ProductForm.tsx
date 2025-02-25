@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { X, Upload, Image as ImageIcon } from 'lucide-react';
+import { useDropzone } from 'react-dropzone';
 
 interface Size {
   size: string;
@@ -9,6 +10,7 @@ interface Size {
 interface Image {
   url: string;
   isMain: boolean;
+  file?: File;
 }
 
 interface ProductFormData {
@@ -42,13 +44,41 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     sizes: [],
     images: []
   });
+  const [errors, setErrors] = useState<Partial<Record<keyof ProductFormData, string>>>({});
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    acceptedFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const imageUrl = reader.result as string;
+        setFormData(prev => ({
+          ...prev,
+          images: [...prev.images, {
+            url: imageUrl,
+            isMain: prev.images.length === 0,
+            file
+          }]
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'image/*': ['.png', '.jpg', '.jpeg', '.webp']
+    },
+    multiple: true
+  });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'price' ? parseFloat(value) : value
+      [name]: name === 'price' ? parseFloat(value) : name === 'category' ? value.toLowerCase() : value
     }));
+    setErrors(prev => ({ ...prev, [name]: '' }));
   };
 
   const handleSizeChange = (size: string, quantity: number) => {
@@ -70,17 +100,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     });
   };
 
-  const handleImageAdd = (url: string) => {
-    setFormData(prev => ({
-      ...prev,
-      images: [...prev.images, { url, isMain: prev.images.length === 0 }]
-    }));
-  };
-
   const handleImageRemove = (index: number) => {
     setFormData(prev => {
       const newImages = prev.images.filter((_, i) => i !== index);
-      // If we removed the main image, make the first remaining image the main one
       if (prev.images[index].isMain && newImages.length > 0) {
         newImages[0].isMain = true;
       }
@@ -98,141 +120,179 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     }));
   };
 
+  const validateForm = (): boolean => {
+    const newErrors: Partial<Record<keyof ProductFormData, string>> = {};
+
+    if (!formData.name.trim()) newErrors.name = 'Name is required';
+    if (!formData.description.trim()) newErrors.description = 'Description is required';
+    if (formData.price <= 0) newErrors.price = 'Price must be greater than 0';
+    if (!formData.category) newErrors.category = 'Category is required';
+    if (formData.sizes.length === 0) newErrors.sizes = 'At least one size is required';
+    if (formData.images.length === 0) newErrors.images = 'At least one image is required';
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    if (validateForm()) {
+      onSubmit(formData);
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Name</label>
-        <input
-          type="text"
-          name="name"
-          value={formData.name}
-          onChange={handleChange}
-          required
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black sm:text-sm"
-        />
-      </div>
+    <form onSubmit={handleSubmit} className="max-w-4xl mx-auto p-4 space-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Left Column - Basic Info */}
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Name</label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${
+                errors.name ? 'border-red-500' : 'border-gray-300'
+              } focus:border-black focus:ring-black`}
+            />
+            {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
+          </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Description</label>
-        <textarea
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
-          required
-          rows={4}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black sm:text-sm"
-        />
-      </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Description</label>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              rows={4}
+              className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${
+                errors.description ? 'border-red-500' : 'border-gray-300'
+              } focus:border-black focus:ring-black`}
+            />
+            {errors.description && <p className="mt-1 text-sm text-red-500">{errors.description}</p>}
+          </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Price</label>
-        <input
-          type="number"
-          name="price"
-          value={formData.price}
-          onChange={handleChange}
-          required
-          min="0"
-          step="0.01"
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black sm:text-sm"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Category</label>
-        <select
-          name="category"
-          value={formData.category}
-          onChange={handleChange}
-          required
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black sm:text-sm"
-        >
-          <option value="">Select a category</option>
-          {CATEGORIES.map(category => (
-            <option key={category} value={category.toLowerCase()}>
-              {category}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Sizes and Quantities</label>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-          {AVAILABLE_SIZES.map(size => (
-            <div key={size} className="flex flex-col space-y-1">
-              <label className="text-sm font-medium text-gray-700">{size}</label>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Price</label>
               <input
                 type="number"
+                name="price"
+                value={formData.price}
+                onChange={handleChange}
                 min="0"
-                value={formData.sizes.find(s => s.size === size)?.quantity || 0}
-                onChange={(e) => handleSizeChange(size, parseInt(e.target.value))}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black sm:text-sm"
+                step="0.01"
+                className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${
+                  errors.price ? 'border-red-500' : 'border-gray-300'
+                } focus:border-black focus:ring-black`}
               />
+              {errors.price && <p className="mt-1 text-sm text-red-500">{errors.price}</p>}
             </div>
-          ))}
-        </div>
-      </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Images</label>
-        <div className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <input
-              type="url"
-              placeholder="Enter image URL"
-              className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black sm:text-sm"
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  const input = e.target as HTMLInputElement;
-                  handleImageAdd(input.value);
-                  input.value = '';
-                }
-              }}
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Category</label>
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${
+                  errors.category ? 'border-red-500' : 'border-gray-300'
+                } focus:border-black focus:ring-black`}
+              >
+                <option value="">Select a category</option>
+                {CATEGORIES.map(category => (
+                  <option key={category} value={category.toLowerCase()}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+              {errors.category && <p className="mt-1 text-sm text-red-500">{errors.category}</p>}
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {formData.images.map((image, index) => (
-              <div key={index} className="relative group">
-                <img
-                  src={image.url}
-                  alt={`Product ${index + 1}`}
-                  className={`w-full h-32 object-cover rounded-md ${
-                    image.isMain ? 'ring-2 ring-black' : ''
-                  }`}
-                />
-                <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-2">
-                  <button
-                    type="button"
-                    onClick={() => setMainImage(index)}
-                    className="text-white bg-black bg-opacity-50 p-1 rounded-md hover:bg-opacity-75"
-                  >
-                    Set as Main
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleImageRemove(index)}
-                    className="text-white bg-red-500 bg-opacity-50 p-1 rounded-md hover:bg-opacity-75"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+        </div>
+
+        {/* Right Column - Sizes and Images */}
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Sizes and Quantities</label>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {AVAILABLE_SIZES.map(size => (
+                <div key={size} className="flex flex-col space-y-1 p-2 border rounded-md">
+                  <label className="text-sm font-medium text-gray-700">{size}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.sizes.find(s => s.size === size)?.quantity || 0}
+                    onChange={(e) => handleSizeChange(size, parseInt(e.target.value))}
+                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-black focus:ring-black sm:text-sm"
+                  />
                 </div>
+              ))}
+            </div>
+            {errors.sizes && <p className="mt-1 text-sm text-red-500">{errors.sizes}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Images</label>
+            <div
+              {...getRootProps()}
+              className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+                isDragActive ? 'border-black bg-gray-50' : 'border-gray-300'
+              }`}
+            >
+              <input {...getInputProps()} />
+              <div className="space-y-2">
+                <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
+                <p className="text-sm text-gray-600">
+                  {isDragActive
+                    ? 'Drop the images here...'
+                    : 'Drag & drop images here, or click to select files'}
+                </p>
+                <p className="text-xs text-gray-500">Supports: PNG, JPG, JPEG, WebP</p>
               </div>
-            ))}
+            </div>
+            {errors.images && <p className="mt-1 text-sm text-red-500">{errors.images}</p>}
+
+            <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
+              {formData.images.map((image, index) => (
+                <div key={index} className="relative group aspect-square">
+                  <img
+                    src={image.url}
+                    alt={`Product ${index + 1}`}
+                    className={`w-full h-full object-cover rounded-md ${
+                      image.isMain ? 'ring-2 ring-black' : ''
+                    }`}
+                  />
+                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => setMainImage(index)}
+                      className="text-white bg-black bg-opacity-50 p-2 rounded-md hover:bg-opacity-75 transition-colors"
+                    >
+                      {image.isMain ? 'Main Image' : 'Set as Main'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleImageRemove(index)}
+                      className="text-white bg-red-500 bg-opacity-50 p-2 rounded-md hover:bg-opacity-75 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end pt-6 border-t">
         <button
           type="submit"
           disabled={isLoading}
-          className="bg-black text-white px-4 py-2 rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="bg-black text-white px-6 py-2 rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {isLoading ? 'Saving...' : 'Save Product'}
         </button>

@@ -1,6 +1,7 @@
 const Product = require('../models/Product');
 const ProductSize = require('../models/ProductSize');
 const ProductImage = require('../models/ProductImage');
+const sequelize = require('../config/database'); // Fixed import path
 
 // Get all products
 exports.getProducts = async (req, res) => {
@@ -146,17 +147,24 @@ exports.updateProduct = async (req, res) => {
     }
 
     // Update images if provided
-    if (images) {
+    if (images && images.length > 0) {
       // Remove existing images
       await ProductImage.destroy({ where: { productId: product.id } });
       
       // Add new images
       await Promise.all(
-        images.map((image, index) => ProductImage.create({
-          productId: product.id,
-          imageUrl: image.url,
-          isMain: index === 0 // First image is main by default
-        }))
+        images.map((image, index) => {
+          // Handle both URL string and data URL formats
+          const imageUrl = image.url || image.imageUrl;
+          if (!imageUrl) {
+            throw new Error('Image URL is required');
+          }
+          return ProductImage.create({
+            productId: product.id,
+            imageUrl: imageUrl,
+            isMain: image.isMain || index === 0
+          });
+        })
       );
     }
 
@@ -177,6 +185,9 @@ exports.updateProduct = async (req, res) => {
     res.json(updatedProduct);
   } catch (error) {
     console.error('Error updating product:', error);
+    if (error.name === 'ValidationError' || error.name === 'SequelizeValidationError') {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -203,9 +214,73 @@ exports.deleteProduct = async (req, res) => {
 // Get products by category
 exports.getProductsByCategory = async (req, res) => {
   try {
+    const { category } = req.params;
+    
+    // Convert category to lowercase and handle special cases
+    let normalizedCategory = category.toLowerCase();
+    
+    // Special handling for category filtering
+    const whereClause = {};
+    
+    // If not 'all', add category filter
+    if (normalizedCategory !== 'all') {
+      whereClause.category = sequelize.where(
+        sequelize.fn('LOWER', sequelize.col('category')),
+        normalizedCategory
+      );
+    }
+
+    const products = await Product.findAll({
+      where: whereClause,
+      include: [
+        {
+          model: ProductSize,
+          as: 'sizes'
+        },
+        {
+          model: ProductImage,
+          as: 'images'
+        }
+      ],
+      order: [['createdAt', 'DESC']] // Newest first by default
+    });
+
+    // Return empty array instead of 404 for no products
+    res.json(products);
+  } catch (error) {
+    console.error('Error fetching products by category:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Search products
+exports.searchProducts = async (req, res) => {
+  try {
+    const { query } = req.query;
+    
+    if (!query) {
+      return res.status(400).json({ message: 'Search query is required' });
+    }
+
     const products = await Product.findAll({
       where: {
-        category: req.params.category
+        [sequelize.Op.or]: [
+          {
+            name: {
+              [sequelize.Op.iLike]: `%${query}%`
+            }
+          },
+          {
+            description: {
+              [sequelize.Op.iLike]: `%${query}%`
+            }
+          },
+          {
+            category: {
+              [sequelize.Op.iLike]: `%${query}%`
+            }
+          }
+        ]
       },
       include: [
         {
@@ -216,11 +291,13 @@ exports.getProductsByCategory = async (req, res) => {
           model: ProductImage,
           as: 'images'
         }
-      ]
+      ],
+      order: [['createdAt', 'DESC']]
     });
+
     res.json(products);
   } catch (error) {
-    console.error('Error fetching products by category:', error);
+    console.error('Error searching products:', error);
     res.status(500).json({ error: 'Server error' });
   }
 };

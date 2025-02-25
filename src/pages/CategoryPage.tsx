@@ -1,31 +1,88 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ProductGrid } from '../components/ProductGrid';
-import { products } from '../data/products';
 import { SortOption } from '../types';
+import { productService } from '../services/api';
+
+interface Product {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  sizes: Array<{
+    size: string;
+    quantity: number;
+  }>;
+  images: Array<{
+    url: string;
+    isMain: boolean;
+  }>;
+  subCategory: string;
+}
 
 export const CategoryPage = () => {
   const { category } = useParams<{ category: string }>();
   const [sortOption, setSortOption] = useState<SortOption>('featured');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>('all');
 
-    const categoryProducts = category === 'all' || category === 'new' || category === 'tops' || category === 'bottoms' || category === 'accessories' || category === 'shoes'
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        let data;
+        
+        if (category === 'all') {
+          data = await productService.getProducts();
+        } else {
+          data = await productService.getProductsByCategory(category || '');
+        }
+        
+        setProducts(data);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        setError('Failed to load products. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    ? products 
-    : products.filter(product => product.category === category);
-
-  const subCategories = ['all', 'new', 'tops', 'bottoms', 'accessories', 'shoes', ...new Set(categoryProducts.map(p => p.subCategory))];
-  
-  const filteredProducts = selectedSubCategory === 'all'
-    ? categoryProducts
-    : categoryProducts.filter(p => p.subCategory === selectedSubCategory);
+    fetchProducts();
+  }, [category]);
 
   const fadeIn = {
     initial: { opacity: 0 },
     animate: { opacity: 1 },
     transition: { duration: 0.5 }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen pt-32 pb-24 px-6 lg:px-12 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen pt-32 pb-24 px-6 lg:px-12 flex items-center justify-center">
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
+
+  // Get unique subcategories from products
+  const subCategories = ['all', ...new Set(products.filter(p => p.subCategory).map(p => p.subCategory))];
+  
+  const filteredProducts = selectedSubCategory === 'all'
+    ? products
+    : products.filter(p => p.subCategory === selectedSubCategory);
 
   return (
     <motion.div 

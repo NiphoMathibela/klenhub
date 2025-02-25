@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingBag, Search, Menu, X, User, LogOut } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -8,10 +8,15 @@ import { motion } from 'framer-motion';
 export const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
   const { state } = useCart();
   const { isAuthenticated, isAdmin, logout } = useAuth();
+  const navigate = useNavigate();
 
   const categories = [
+    { name: 'ALL', path: '/category/all' },
     { name: 'SALE', path: '/category/sale' },
     { name: 'NEW', path: '/category/new' },
     { name: 'TOPS', path: '/category/tops' },
@@ -25,6 +30,24 @@ export const Navbar = () => {
       await logout();
     } catch (error) {
       console.error('Logout failed:', error);
+    }
+  };
+
+  const handleSearch = async () => {
+    setIsSearching(true);
+    try {
+      // Implement search API call here
+      const response = await fetch('/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: searchQuery }),
+      });
+      const data = await response.json();
+      setSearchResults(data.products);
+    } catch (error) {
+      console.error('Search failed:', error);
+    } finally {
+      setIsSearching(false);
     }
   };
 
@@ -153,18 +176,66 @@ export const Navbar = () => {
           transition={{ duration: 0.2 }}
           className="absolute left-0 right-0 bg-white border-t p-6"
         >
-          <div className='w-4 right-0 my-2' onClick={() => setIsSearchOpen(false)}><X/></div>
+          <div className='flex justify-end'>
+            <button onClick={() => setIsSearchOpen(false)} className="p-2 hover:text-gray-600">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
           <div className="relative">
             <input
               type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
               placeholder="Search products..."
               className="w-full px-4 py-3 bg-gray-50 focus:outline-none transition-all duration-300 focus:bg-gray-100 focus:ring-1 focus:ring-black"
               autoFocus
             />
-            <button className="absolute right-2 top-1/2 transform -translate-y-1/2 py-2 px-4 bg-black text-white hover:bg-gray-900 transition">
-              Search
+            <button 
+              onClick={handleSearch}
+              disabled={isSearching}
+              className={`absolute right-2 top-1/2 transform -translate-y-1/2 py-2 px-4 bg-black text-white transition ${
+                isSearching ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-900'
+              }`}
+            >
+              {isSearching ? 'Searching...' : 'Search'}
             </button>
           </div>
+          
+          {/* Search Results */}
+          {searchResults.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-4 max-h-96 overflow-y-auto"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {searchResults.map((product) => (
+                  <motion.div
+                    key={product.id}
+                    whileHover={{ scale: 1.02 }}
+                    className="bg-gray-50 p-4 cursor-pointer"
+                    onClick={() => {
+                      navigate(`/product/${product.id}`);
+                      setIsSearchOpen(false);
+                      setSearchResults([]);
+                      setSearchQuery('');
+                    }}
+                  >
+                    <div className="aspect-square w-full overflow-hidden mb-2">
+                      <img
+                        src={product.images[0]?.url || '/placeholder.jpg'}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <h3 className="font-medium">{product.name}</h3>
+                    <p className="text-sm text-gray-600">${product.price}</p>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
         </motion.div>
       </div>
     </motion.nav>

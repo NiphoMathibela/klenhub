@@ -1,18 +1,13 @@
-export type SortOption = 'featured' | 'newest' | 'price-asc' | 'price-desc';
+export type SortOption = 'featured' | 'price-asc' | 'price-desc' | 'newest';
 
 export interface Product {
-  id: string;
+  id: number;
   name: string;
-  brand: string;
-  price: number;
-  salePrice?: number;
-  category: string;
-  subCategory: string;
-  images: string[];
   description: string;
-  sizes: string[];
-  featured?: boolean;
-  onSale?: boolean;
+  price: number;
+  category: string;
+  images: Array<{ id: number; imageUrl: string; isMain: boolean }>;
+  sizes: Array<{ id: number; size: string; quantity: number }>;
 }
 
 export interface CartItem {
