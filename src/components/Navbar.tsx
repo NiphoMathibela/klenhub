@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingBag, Search, Menu, X, User } from 'lucide-react';
+import { ShoppingBag, Search, Menu, X, User, LogOut } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 
 export const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { state } = useCart();
+  const { isAuthenticated, isAdmin, logout } = useAuth();
 
   const categories = [
     { name: 'SALE', path: '/category/sale' },
@@ -17,6 +19,14 @@ export const Navbar = () => {
     { name: 'ACCESSORIES', path: '/category/accessories' },
     { name: 'SHOES', path: '/category/shoes' },
   ];
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
 
   return (
     <motion.nav 
@@ -49,9 +59,22 @@ export const Navbar = () => {
 
           <div className="flex-1 flex justify-end items-center space-x-6">
             <motion.div whileHover={{ scale: 1.1 }}>
-              <Link to="/login" className="p-2 relative hover:text-gray-600 transition-colors">
-                <User className="h-4 w-4" />
-              </Link>
+              {isAuthenticated ? (
+                <div className="flex items-center space-x-4">
+                  {isAdmin && (
+                    <Link to="/admin/dashboard" className="hover:text-gray-600">
+                      <User className="w-6 h-6" />
+                    </Link>
+                  )}
+                  <button onClick={handleLogout} className="hover:text-gray-600">
+                    <LogOut className="w-6 h-6" />
+                  </button>
+                </div>
+              ) : (
+                <Link to="/login" className="p-2 relative hover:text-gray-600 transition-colors">
+                  <User className="h-4 w-4" />
+                </Link>
+              )}
             </motion.div>
             <motion.button
               whileHover={{ scale: 1.1 }}
