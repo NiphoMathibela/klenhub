@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useReducer } from 'react';
+import { orderService } from '../services/api';
 import { CartItem, Product } from '../types';
 
 interface CartState {
@@ -12,10 +13,13 @@ type CartAction =
   | { type: 'UPDATE_QUANTITY'; payload: { productId: string; size: string; quantity: number } }
   | { type: 'CLEAR_CART' };
 
-const CartContext = createContext<{
+interface CartContextType {
   state: CartState;
   dispatch: React.Dispatch<CartAction>;
-} | null>(null);
+  checkout: () => Promise<void>;
+}
+
+const CartContext = createContext<CartContextType | null>(null);
 
 const cartReducer = (state: CartState, action: CartAction): CartState => {
   switch (action.type) {
@@ -84,8 +88,27 @@ const calculateTotal = (items: CartItem[]): number => {
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(cartReducer, { items: [], total: 0 });
 
+  const checkout = async () => {
+    try {
+      const orderData = {
+        items: state.items.map(item => ({
+          productId: item.product.id,
+          quantity: item.quantity,
+          size: item.size
+        })),
+        total: state.total
+      };
+
+      await orderService.createOrder(orderData);
+      dispatch({ type: 'CLEAR_CART' });
+    } catch (error) {
+      console.error('Checkout error:', error);
+      throw error;
+    }
+  };
+
   return (
-    <CartContext.Provider value={{ state, dispatch }}>
+    <CartContext.Provider value={{ state, dispatch, checkout }}>
       {children}
     </CartContext.Provider>
   );

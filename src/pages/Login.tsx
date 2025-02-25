@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { login } = useAuth();
+  const { login, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -15,14 +16,17 @@ const Login: React.FC = () => {
     
     try {
       await login(email, password);
-      navigate('/');
+      
+      // Get the redirect path from location state or default to dashboard for admin, home for users
+      const from = location.state?.from?.pathname || (isAdmin ? '/admin/dashboard' : '/');
+      navigate(from, { replace: true });
     } catch (err) {
       setError('Failed to login. Please check your credentials.');
     }
   };
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-100">
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="bg-white p-8 rounded shadow-md w-96">
         <h2 className="text-2xl mb-6">LOGIN</h2>
         {error && <div className="mb-4 text-red-500">{error}</div>}

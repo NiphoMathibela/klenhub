@@ -1,76 +1,99 @@
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import {
-  LayoutDashboard,
-  Package,
-  ShoppingCart,
-  Users,
-  Settings,
+import React from 'react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { 
+  LayoutDashboard, 
+  ShoppingBag, 
+  Package, 
   LogOut,
   Menu,
   X
 } from 'lucide-react';
 
-interface NavItem {
-  label: string;
-  path: string;
-  icon: React.ReactNode;
-}
+const AdminLayout = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+  const { logout } = useAuth();
+  const navigate = useNavigate();
 
-const navItems: NavItem[] = [
-  { label: 'Dashboard', path: '/admin', icon: <LayoutDashboard className="h-5 w-5" /> },
-  { label: 'Products', path: '/admin/products', icon: <Package className="h-5 w-5" /> },
-  { label: 'Orders', path: '/admin/orders', icon: <ShoppingCart className="h-5 w-5" /> },
-  { label: 'Customers', path: '/admin/customers', icon: <Users className="h-5 w-5" /> },
-  { label: 'Settings', path: '/admin/settings', icon: <Settings className="h-5 w-5" /> },
-];
-
-export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const location = useLocation();
-
-  const isActiveRoute = (path: string) => {
-    if (path === '/admin') {
-      return location.pathname === path;
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
     }
-    return location.pathname.startsWith(path);
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="flex items-center justify-between bg-gray-800 p-4">
-        <Link to="/" className="text-xl text-white">KLEN_HUB</Link>
-        <button
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="text-white lg:hidden"
-        >
-          {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
-      </header>
+  const navItems = [
+    { path: '/admin/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
+    { path: '/admin/orders', label: 'Orders', icon: <ShoppingBag className="w-5 h-5" /> },
+    { path: '/admin/products', label: 'Products', icon: <Package className="w-5 h-5" /> },
+  ];
 
-      {/* Navigation */}
-      <nav className={`flex space-x-4 bg-gray-800 p-4 transition-all duration-300 z-20 ${isSidebarOpen ? 'block' : 'hidden'} lg:flex`}>
-        {navItems.map((item) => (
-          <Link
-            key={item.path}
-            to={item.path}
-            className={`flex items-center space-x-2 text-white px-3 py-2 rounded-lg transition-colors
-              ${isActiveRoute(item.path) ? 'bg-black' : 'hover:bg-gray-700'}`}
-          >
-            {item.icon}
-            <span>{item.label}</span>
-          </Link>
-        ))}
-      </nav>
+  return (
+    <div className="flex h-screen bg-gray-100">
+      {/* Sidebar Toggle Button (Mobile) */}
+      <button
+        className="fixed top-4 left-4 z-50 lg:hidden bg-white p-2 rounded-lg shadow-lg"
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+      >
+        {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+      </button>
+
+      {/* Sidebar */}
+      <aside
+        className={`
+          fixed lg:static inset-y-0 left-0 z-40
+          w-64 bg-white shadow-lg transform transition-transform duration-200 ease-in-out
+          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          lg:translate-x-0
+        `}
+      >
+        <div className="flex flex-col h-full">
+          <div className="p-4">
+            <h1 className="text-2xl font-semibold tracking-wider">KLENHUB</h1>
+            <p className="text-sm text-gray-500">Admin Dashboard</p>
+          </div>
+
+          <nav className="flex-1 px-4 pb-4">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  `flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors
+                  ${isActive 
+                    ? 'bg-black text-white' 
+                    : 'text-gray-700 hover:bg-gray-100'
+                  }`
+                }
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+          </nav>
+
+          <div className="p-4 border-t">
+            <button
+              onClick={handleLogout}
+              className="flex items-center space-x-3 w-full px-4 py-3 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <LogOut className="w-5 h-5" />
+              <span>Logout</span>
+            </button>
+          </div>
+        </div>
+      </aside>
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 ${isSidebarOpen ? 'lg:ml-64' : 'lg:ml-20'}`}>
-        <div className="min-h-[calc(100vh-4rem)]">
-          {children}
+      <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100">
+        <div className="container mx-auto px-6 py-8">
+          <Outlet />
         </div>
       </main>
     </div>
   );
 };
+
+export default AdminLayout;

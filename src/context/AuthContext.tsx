@@ -1,9 +1,9 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-
-const API_BASE_URL = 'http://localhost:3000/api';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { authService } from '../services/api';
 
 type User = {
   id: string;
+  name: string;
   email: string;
   role: 'user' | 'admin';
 };
@@ -11,36 +11,39 @@ type User = {
 type AuthContextType = {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
 };
-
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
 
+  useEffect(() => {
+    const initializeAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const userData = await authService.getCurrentUser();
+          setUser(userData);
+        } catch (error) {
+          console.error('Failed to get user data:', error);
+          localStorage.removeItem('token');
+        }
+      }
+    };
+
+    initializeAuth();
+  }, []);
+
   const register = async (name: string, email: string, password: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name, email, password }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Registration failed');
-      }
-
-      // Automatically log in user after successful registration
-      await login(email, password);
-      console.log("Registered and logged in.");
+      const data = await authService.register(name, email, password);
+      localStorage.setItem('token', data.token);
+      setUser(data);
     } catch (error) {
       console.error('Registration error:', error);
       throw error;
@@ -48,34 +51,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const login = async (email: string, password: string) => {
-
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Login failed');
-      }
-
-      const { token } = await response.json();
-      
-      // Decode the token to get user info
-      const decoded = JSON.parse(atob(token.split('.')[1]));
-      setUser({
-        id: decoded.id,
-        email: decoded.email,
-        role: 'user', // Default role, can be updated if API provides it
-      });
-
-      console.log("Logged In: " + user);
-      
-      localStorage.setItem('token', token);
+      const data = await authService.login(email, password);
+      localStorage.setItem('token', data.token);
+      setUser(data);
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -92,7 +71,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{ user, login, register, logout, isAuthenticated, isAdmin }}>
-
       {children}
     </AuthContext.Provider>
   );
