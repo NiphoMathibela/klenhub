@@ -1,121 +1,98 @@
 import React, { useState, useEffect } from 'react';
+import { Plus, Edit, Trash2 } from 'lucide-react';
+import { ProductForm } from '../../components/ProductForm';
+import { motion } from 'framer-motion';
 import { productService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
+interface Size {
+  size: string;
+  quantity: number;
+}
+
+interface Image {
+  url: string;
+  isMain: boolean;
+}
+
 interface Product {
-  id: string;
+  id: number;
   name: string;
   description: string;
   price: number;
   category: string;
-  imageUrl?: string;
-  stock: number;
+  sizes: Size[];
+  images: Image[];
 }
 
 export const Products = () => {
   const { isAdmin } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    price: '',
-    category: '',
-    imageUrl: '',
-    stock: ''
-  });
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   useEffect(() => {
-    loadProducts();
-  }, []);
+    if (!isAdmin) return;
+    fetchProducts();
+  }, [isAdmin]);
 
-  const loadProducts = async () => {
+  const fetchProducts = async () => {
     try {
       const data = await productService.getProducts();
       setProducts(data);
-    } catch (err) {
-      setError('Failed to load products');
+    } catch (error) {
+      console.error('Error fetching products:', error);
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+  const handleCreateProduct = async (productData: Omit<Product, 'id'>) => {
+    setIsLoading(true);
+    try {
+      const response = await productService.createProduct(productData);
+
+      if (!response.ok) throw new Error('Failed to create product');
+
+      await fetchProducts();
+      setIsFormOpen(false);
+    } catch (error) {
+      console.error('Error creating product:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      description: '',
-      price: '',
-      category: '',
-      imageUrl: '',
-      stock: ''
-    });
-    setSelectedProduct(null);
-    setIsEditing(false);
+  const handleUpdateProduct = async (productData: Omit<Product, 'id'>) => {
+    if (!selectedProduct) return;
+
+    setIsLoading(true);
+    try {
+      const response = await productService.updateProduct(selectedProduct.id, productData);
+
+      if (!response.ok) throw new Error('Failed to update product');
+
+      await fetchProducts();
+      setIsFormOpen(false);
+      setSelectedProduct(null);
+    } catch (error) {
+      console.error('Error updating product:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
+  const handleDeleteProduct = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this product?')) return;
 
     try {
-      const productData = {
-        ...formData,
-        price: parseFloat(formData.price),
-        stock: parseInt(formData.stock)
-      };
+      const response = await productService.deleteProduct(id);
 
-      if (isEditing && selectedProduct) {
-        await productService.updateProduct(selectedProduct.id, productData);
-        setSuccess('Product updated successfully!');
-      } else {
-        await productService.createProduct(productData);
-        setSuccess('Product created successfully!');
-      }
+      if (!response.ok) throw new Error('Failed to delete product');
 
-      resetForm();
-      loadProducts();
-    } catch (err) {
-      setError('Failed to save product');
+      await fetchProducts();
+    } catch (error) {
+      console.error('Error deleting product:', error);
     }
-  };
-
-  const handleEdit = (product: Product) => {
-    setSelectedProduct(product);
-    setFormData({
-      name: product.name,
-      description: product.description,
-      price: product.price.toString(),
-      category: product.category,
-      imageUrl: product.imageUrl || '',
-      stock: product.stock.toString()
-    });
-    setIsEditing(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
-      try {
-        await productService.deleteProduct(id);
-        setSuccess('Product deleted successfully!');
-        loadProducts();
-      } catch (err) {
-        setError('Failed to delete product');
-      }
-    }
-  };
-
-  const formatPrice = (price: number | string): string => {
-    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
-    return !isNaN(numPrice) ? numPrice.toFixed(2) : '0.00';
   };
 
   if (!isAdmin) {
@@ -123,135 +100,118 @@ export const Products = () => {
   }
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Product Management</h1>
-      
-      {/* Error and Success Messages */}
-      {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
-      {success && <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">{success}</div>}
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-semibold">Products</h1>
+        <button
+          onClick={() => {
+            setSelectedProduct(null);
+            setIsFormOpen(true);
+          }}
+          className="flex items-center space-x-2 bg-black text-white px-4 py-2 rounded-md hover:bg-gray-800"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Add Product</span>
+        </button>
+      </div>
 
-      {/* Product Form */}
-      <form onSubmit={handleSubmit} className="mb-8 bg-white p-4 rounded shadow">
-        <h2 className="text-xl font-semibold mb-4">{isEditing ? 'Edit Product' : 'Add New Product'}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block mb-2">Name</label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-              className="w-full p-2 border rounded"
-              required
-            />
-          </div>
-          <div>
-            <label className="block mb-2">Category</label>
-            <input
-              type="text"
-              name="category"
-              value={formData.category}
-              onChange={handleInputChange}
-              className="w-full p-2 border rounded"
-              required
-            />
-          </div>
-          <div>
-            <label className="block mb-2">Price</label>
-            <input
-              type="number"
-              name="price"
-              value={formData.price}
-              onChange={handleInputChange}
-              className="w-full p-2 border rounded"
-              step="0.01"
-              required
-            />
-          </div>
-          <div>
-            <label className="block mb-2">Stock</label>
-            <input
-              type="number"
-              name="stock"
-              value={formData.stock}
-              onChange={handleInputChange}
-              className="w-full p-2 border rounded"
-              required
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="block mb-2">Description</label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              className="w-full p-2 border rounded"
-              rows={3}
-              required
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="block mb-2">Image URL</label>
-            <input
-              type="url"
-              name="imageUrl"
-              value={formData.imageUrl}
-              onChange={handleInputChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-        </div>
-        <div className="mt-4 flex gap-2">
-          <button
-            type="submit"
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+      {isFormOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
           >
-            {isEditing ? 'Update Product' : 'Add Product'}
-          </button>
-          {isEditing && (
+            <h2 className="text-xl font-semibold mb-4">
+              {selectedProduct ? 'Edit Product' : 'New Product'}
+            </h2>
+            <ProductForm
+              initialData={selectedProduct || undefined}
+              onSubmit={selectedProduct ? handleUpdateProduct : handleCreateProduct}
+              isLoading={isLoading}
+            />
             <button
-              type="button"
-              onClick={resetForm}
-              className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+              onClick={() => {
+                setIsFormOpen(false);
+                setSelectedProduct(null);
+              }}
+              className="mt-4 text-gray-600 hover:text-gray-800"
             >
               Cancel
             </button>
-          )}
+          </motion.div>
         </div>
-      </form>
+      )}
 
-      {/* Products List */}
-      <div className="bg-white rounded shadow overflow-x-auto">
-        <table className="min-w-full">
-          <thead className="bg-gray-50">
+      <div className="bg-white rounded-lg shadow">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead>
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Image
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Name
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Category
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Price
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Sizes
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-200">
             {products.map((product) => (
               <tr key={product.id}>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <img
+                    src={product.images.find(img => img.isMain)?.url || product.images[0]?.url}
+                    alt={product.name}
+                    className="h-10 w-10 object-cover rounded"
+                  />
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap">{product.name}</td>
                 <td className="px-6 py-4 whitespace-nowrap">{product.category}</td>
-                <td className="px-6 py-4 whitespace-nowrap">${formatPrice(product.price)}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{product.stock}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <button
-                    onClick={() => handleEdit(product)}
-                    className="text-blue-600 hover:text-blue-900 mr-2"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(product.id)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    Delete
-                  </button>
+                  ${product.price.toFixed(2)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex flex-wrap gap-2">
+                    {product.sizes.map((size) => (
+                      <span
+                        key={size.size}
+                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100"
+                      >
+                        {size.size}: {size.quantity}
+                      </span>
+                    ))}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center space-x-4">
+                    <button
+                      onClick={() => {
+                        setSelectedProduct(product);
+                        setIsFormOpen(true);
+                      }}
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteProduct(product.id)}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

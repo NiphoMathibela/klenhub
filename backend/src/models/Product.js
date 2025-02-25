@@ -1,5 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
+const ProductSize = require('./ProductSize');
+const ProductImage = require('./ProductImage');
 
 const Product = sequelize.define('Product', {
   id: {
@@ -26,18 +28,28 @@ const Product = sequelize.define('Product', {
   category: {
     type: DataTypes.STRING,
     allowNull: false
-  },
-  imageUrl: {
-    type: DataTypes.STRING,
-    allowNull: true
-  },
-  stock: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    defaultValue: 0
   }
 }, {
   timestamps: true
+});
+
+// Define associations
+Product.hasMany(ProductSize, {
+  foreignKey: 'productId',
+  as: 'sizes'
+});
+
+Product.hasMany(ProductImage, {
+  foreignKey: 'productId',
+  as: 'images'
+});
+
+ProductSize.belongsTo(Product, {
+  foreignKey: 'productId'
+});
+
+ProductImage.belongsTo(Product, {
+  foreignKey: 'productId'
 });
 
 module.exports = Product;
