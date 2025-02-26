@@ -2,6 +2,7 @@ const Product = require('../models/Product');
 const ProductSize = require('../models/ProductSize');
 const ProductImage = require('../models/ProductImage');
 const sequelize = require('../config/database'); // Fixed import path
+const { Op } = require('sequelize');
 
 // Get all products
 exports.getProducts = async (req, res) => {
@@ -264,20 +265,20 @@ exports.searchProducts = async (req, res) => {
 
     const products = await Product.findAll({
       where: {
-        [sequelize.Op.or]: [
+        [Op.or]: [
           {
             name: {
-              [sequelize.Op.iLike]: `%${query}%`
+              [Op.like]: `%${query}%`
             }
           },
           {
             description: {
-              [sequelize.Op.iLike]: `%${query}%`
+              [Op.like]: `%${query}%`
             }
           },
           {
             category: {
-              [sequelize.Op.iLike]: `%${query}%`
+              [Op.like]: `%${query}%`
             }
           }
         ]

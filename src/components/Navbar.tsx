@@ -34,16 +34,33 @@ export const Navbar = () => {
   };
 
   const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      return; // Don't search if query is empty
+    }
+    
     setIsSearching(true);
+    setSearchResults([]);
+    
     try {
-      // Implement search API call here
-      const response = await fetch('/api/search', {
-        method: 'POST',
+      // Updated to use the correct endpoint and HTTP method
+      const response = await fetch(`/api/products/search?query=${encodeURIComponent(searchQuery.trim())}`, {
+        method: 'GET',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: searchQuery }),
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Search failed:', response.status, errorData);
+        throw new Error(`Search failed: ${response.status} ${errorData.error || ''}`);
+      }
+      
       const data = await response.json();
-      setSearchResults(data.products);
+      console.log('Search results:', data);
+      setSearchResults(data);
+      
+      if (data.length === 0) {
+        console.log('No products found matching the search criteria');
+      }
     } catch (error) {
       console.error('Search failed:', error);
     } finally {
@@ -203,7 +220,7 @@ export const Navbar = () => {
           </div>
           
           {/* Search Results */}
-          {searchResults.length > 0 && (
+          {searchResults.length > 0 ? (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -224,7 +241,7 @@ export const Navbar = () => {
                   >
                     <div className="aspect-square w-full overflow-hidden mb-2">
                       <img
-                        src={product.images[0]?.url || '/placeholder.jpg'}
+                        src={product.images[0]?.imageUrl || '/placeholder.jpg'}
                         alt={product.name}
                         className="w-full h-full object-cover"
                       />
@@ -235,6 +252,17 @@ export const Navbar = () => {
                 ))}
               </div>
             </motion.div>
+          ) : (
+            searchQuery.trim() !== '' && !isSearching && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-4 p-6 text-center bg-gray-50"
+              >
+                <p className="text-gray-600">No products found matching "{searchQuery}"</p>
+                <p className="text-sm mt-2">Try a different search term or browse our categories</p>
+              </motion.div>
+            )
           )}
         </motion.div>
       </div>
