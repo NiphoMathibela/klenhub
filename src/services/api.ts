@@ -38,6 +38,18 @@ export const authService = {
     const response = await api.get('/auth/me');
     return response.data;
   },
+  forgotPassword: async (email: string) => {
+    const response = await api.post('/auth/forgot-password', { email });
+    return response.data;
+  },
+  resetPassword: async (token: string, password: string) => {
+    const response = await api.post(`/auth/reset-password/${token}`, { password });
+    return response.data;
+  },
+  resendVerificationEmail: async () => {
+    const response = await api.post('/auth/resend-verification');
+    return response.data;
+  }
 };
 
 // Product API
@@ -47,36 +59,87 @@ export const productService = {
     const response = await api.get('/products');
     return response.data;
   },
-
   // Get single product
   getProduct: async (id: string) => {
     const response = await api.get(`/products/${id}`);
     return response.data;
   },
-
   // Get products by category
   getProductsByCategory: async (category: string) => {
     const response = await api.get(`/products/category/${category}`);
     return response.data;
   },
-
   // Create new product (admin only)
   createProduct: async (productData: any) => {
-    const response = await api.post('/products', productData);
+    // Process images - convert File objects to URLs or keep existing URLs
+    const processedData = {
+      ...productData,
+      images: await Promise.all(
+        productData.images.map(async (image: any) => {
+          // If the image already has a URL and no file, use it directly
+          if (image.url && !image.file) {
+            return {
+              url: image.url,
+              isMain: image.isMain
+            };
+          }
+          
+          // If it has a file, we need to handle it
+          if (image.file) {
+            // For now, we're just passing the data URL
+            // In a real app, you would upload to a server or cloud storage
+            return {
+              url: image.url, // This is already a data URL from FileReader
+              isMain: image.isMain
+            };
+          }
+          
+          return image;
+        })
+      )
+    };
+    
+    const response = await api.post('/products', processedData);
     return response.data;
   },
-
   // Update product (admin only)
   updateProduct: async (id: string, productData: any) => {
-    const response = await api.put(`/products/${id}`, productData);
+    // Process images - convert File objects to URLs or keep existing URLs
+    const processedData = {
+      ...productData,
+      images: await Promise.all(
+        productData.images.map(async (image: any) => {
+          // If the image already has a URL and no file, use it directly
+          if (image.url && !image.file) {
+            return {
+              url: image.url,
+              isMain: image.isMain
+            };
+          }
+          
+          // If it has a file, we need to handle it
+          if (image.file) {
+            // For now, we're just passing the data URL
+            // In a real app, you would upload to a server or cloud storage
+            return {
+              url: image.url, // This is already a data URL from FileReader
+              isMain: image.isMain
+            };
+          }
+          
+          return image;
+        })
+      )
+    };
+    
+    const response = await api.put(`/products/${id}`, processedData);
     return response.data;
   },
-
   // Delete product (admin only)
   deleteProduct: async (id: string) => {
     const response = await api.delete(`/products/${id}`);
     return response.data;
-  },
+  }
 };
 
 // Search API
@@ -104,19 +167,28 @@ export const orderService = {
     const response = await api.post('/orders', orderData);
     return response.data;
   },
-
+  
+  // Get all orders (admin only)
   getOrders: async () => {
-    const response = await api.get('/orders');
+    const response = await api.get('/orders/admin');
     return response.data;
   },
-
+  
+  // Get user's orders
+  getUserOrders: async () => {
+    const response = await api.get('/orders/my-orders');
+    return response.data;
+  },
+  
+  // Get specific order
   getOrder: async (id: string) => {
     const response = await api.get(`/orders/${id}`);
     return response.data;
   },
-
+  
+  // Update order status (admin only)
   updateOrderStatus: async (id: string, status: string) => {
     const response = await api.patch(`/orders/${id}/status`, { status });
     return response.data;
-  },
+  }
 };

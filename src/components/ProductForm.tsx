@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { X, Upload, Image as ImageIcon } from 'lucide-react';
+import { X, Upload, Image as ImageIcon, Link as LinkIcon, Plus } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 
 interface Size {
@@ -45,6 +45,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     images: []
   });
   const [errors, setErrors] = useState<Partial<Record<keyof ProductFormData, string>>>({});
+  const [imageUrl, setImageUrl] = useState('');
+  const [showImageUrlInput, setShowImageUrlInput] = useState(false);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     acceptedFiles.forEach(file => {
@@ -118,6 +120,31 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         isMain: i === index
       }))
     }));
+  };
+
+  const handleAddImageUrl = () => {
+    if (!imageUrl.trim()) return;
+
+    // Basic URL validation
+    try {
+      new URL(imageUrl);
+    } catch (e) {
+      setErrors(prev => ({ ...prev, imageUrl: 'Please enter a valid URL' }));
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      images: [...prev.images, {
+        url: imageUrl,
+        isMain: prev.images.length === 0
+      }]
+    }));
+
+    // Reset the input
+    setImageUrl('');
+    setShowImageUrlInput(false);
+    setErrors(prev => ({ ...prev, imageUrl: undefined }));
   };
 
   const validateForm = (): boolean => {
@@ -235,7 +262,40 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Images</label>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-medium text-gray-700">Images</label>
+              <button
+                type="button"
+                onClick={() => setShowImageUrlInput(!showImageUrlInput)}
+                className="inline-flex items-center text-sm text-gray-700 hover:text-black"
+              >
+                <LinkIcon className="w-4 h-4 mr-1" />
+                {showImageUrlInput ? 'Hide URL Input' : 'Add Image URL'}
+              </button>
+            </div>
+
+            {showImageUrlInput && (
+              <div className="mb-4 flex">
+                <input
+                  type="text"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="Enter image URL"
+                  className={`flex-grow rounded-l-md border ${
+                    errors.imageUrl ? 'border-red-500' : 'border-gray-300'
+                  } shadow-sm focus:border-black focus:ring-black sm:text-sm`}
+                />
+                <button
+                  type="button"
+                  onClick={handleAddImageUrl}
+                  className="bg-black text-white px-3 py-2 rounded-r-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+            {errors.imageUrl && <p className="mt-1 text-sm text-red-500 mb-2">{errors.imageUrl}</p>}
+
             <div
               {...getRootProps()}
               className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
@@ -264,6 +324,10 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     className={`w-full h-full object-cover rounded-md ${
                       image.isMain ? 'ring-2 ring-black' : ''
                     }`}
+                    onError={(e) => {
+                      // Handle image loading errors
+                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150?text=Image+Error';
+                    }}
                   />
                   <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-2">
                     <button

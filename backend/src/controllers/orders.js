@@ -56,25 +56,22 @@ exports.createOrder = async (req, res) => {
 exports.getOrders = async (req, res) => {
   try {
     const orders = await Order.findAll({
-      where: { userId: req.user.id },
       include: [{ 
         model: OrderItem,
         include: [Product]
-      }]
+      }],
+      order: [['createdAt', 'DESC']]
     });
     res.json(orders);
   } catch (error) {
+    console.error('Get orders error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 };
 
 exports.getOrder = async (req, res) => {
   try {
-    const order = await Order.findOne({
-      where: { 
-        id: req.params.id,
-        userId: req.user.id
-      },
+    const order = await Order.findByPk(req.params.id, {
       include: [{ 
         model: OrderItem,
         include: [Product]
@@ -85,24 +82,52 @@ exports.getOrder = async (req, res) => {
       return res.status(404).json({ error: 'Order not found' });
     }
 
+    // Check if user is admin or the order belongs to the user
+    if (req.user.role !== 'admin' && order.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Not authorized to access this order' });
+    }
+
     res.json(order);
   } catch (error) {
+    console.error('Get order error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 };
 
 exports.updateOrderStatus = async (req, res) => {
   try {
+    const { status } = req.body;
     const order = await Order.findByPk(req.params.id);
+
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    order.status = req.body.status;
+    order.status = status;
     await order.save();
 
     res.json(order);
   } catch (error) {
+    console.error('Update order status error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Get orders for the current user
+exports.getUserOrders = async (req, res) => {
+  try {
+    const orders = await Order.findAll({
+      where: { userId: req.user.id },
+      include: [{ 
+        model: OrderItem,
+        include: [Product]
+      }],
+      order: [['createdAt', 'DESC']]
+    });
+    
+    res.json(orders);
+  } catch (error) {
+    console.error('Get user orders error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 };

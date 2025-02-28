@@ -1,10 +1,11 @@
 const express = require('express');
 const { check } = require('express-validator');
-const { createOrder, getOrders, getOrder, updateOrderStatus } = require('../controllers/orders');
+const { createOrder, getOrders, getOrder, updateOrderStatus, getUserOrders } = require('../controllers/orders');
 const { protect, admin } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Create order - any authenticated user
 router.post('/', [
   protect,
   check('items', 'Items are required').isArray(),
@@ -14,9 +15,16 @@ router.post('/', [
   check('total', 'Total must be a positive number').isFloat({ min: 0 })
 ], createOrder);
 
-router.get('/', protect, admin, getOrders);
-router.get('/:id', protect, admin, getOrder);
+// Get all orders - admin only
+router.get('/admin', protect, admin, getOrders);
 
+// Get user's orders - authenticated user
+router.get('/my-orders', protect, getUserOrders);
+
+// Get specific order - admin or order owner
+router.get('/:id', protect, getOrder);
+
+// Update order status - admin only
 router.patch('/:id/status', [
   protect,
   admin,

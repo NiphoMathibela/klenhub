@@ -6,6 +6,7 @@ type User = {
   name: string;
   email: string;
   role: 'user' | 'admin';
+  isEmailVerified: boolean;
 };
 
 type AuthContextType = {
@@ -15,11 +16,14 @@ type AuthContextType = {
   logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  resendVerificationEmail: () => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+// Export the provider component
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -51,52 +55,89 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
   }, [user]);
 
-  const register = async (name: string, email: string, password: string) => {
+  const login = async (email: string, password: string) => {
     try {
-      console.log('Attempting to register user:', { name, email });
-      const data = await authService.register(name, email, password);
-      console.log('Registration successful:', data);
+      const data = await authService.login(email, password);
       localStorage.setItem('token', data.token);
-      setUser(data);
+      setUser({
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        role: data.role,
+        isEmailVerified: data.isEmailVerified
+      });
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error('Login failed:', error);
       throw error;
     }
   };
 
-  const login = async (email: string, password: string) => {
+  const register = async (name: string, email: string, password: string) => {
     try {
-      console.log('Attempting to login user:', { email });
-      const data = await authService.login(email, password);
-      console.log('Login successful:', data);
+      const data = await authService.register(name, email, password);
       localStorage.setItem('token', data.token);
-      setUser(data);
+      setUser({
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        role: data.role,
+        isEmailVerified: data.isEmailVerified
+      });
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Registration failed:', error);
       throw error;
     }
   };
 
   const logout = () => {
-    console.log('Logging out user:', user?.email);
-    setUser(null);
     localStorage.removeItem('token');
+    setUser(null);
   };
 
-  const isAuthenticated = !!user;
-  const isAdmin = user?.role === 'admin';
+  const resendVerificationEmail = async () => {
+    try {
+      await authService.resendVerificationEmail();
+    } catch (error) {
+      console.error('Failed to resend verification email:', error);
+      throw error;
+    }
+  };
+
+  const forgotPassword = async (email: string) => {
+    try {
+      await authService.forgotPassword(email);
+    } catch (error) {
+      console.error('Failed to process forgot password:', error);
+      throw error;
+    }
+  };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isAuthenticated, isAdmin }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        register,
+        logout,
+        isAuthenticated: !!user,
+        isAdmin: user?.role === 'admin',
+        resendVerificationEmail,
+        forgotPassword
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => {
+// Create a custom hook that returns the auth context
+function useAuthContext() {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-};
+}
+
+// Export the hook (named export, not a declaration)
+export { useAuthContext as useAuth };
