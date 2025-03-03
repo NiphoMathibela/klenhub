@@ -170,13 +170,13 @@ export const orderService = {
   
   // Get all orders (admin only)
   getOrders: async () => {
-    const response = await api.get('/orders/admin');
+    const response = await api.get('/orders');
     return response.data;
   },
   
   // Get user's orders
   getUserOrders: async () => {
-    const response = await api.get('/orders/my-orders');
+    const response = await api.get('/orders/user');
     return response.data;
   },
   
@@ -189,6 +189,21 @@ export const orderService = {
   // Update order status (admin only)
   updateOrderStatus: async (id: string, status: string) => {
     const response = await api.patch(`/orders/${id}/status`, { status });
+    return response.data;
+  }
+};
+
+// Payment Services
+export const paymentService = {
+  // Create a PayFast payment for an order
+  createPayment: async (orderId: string) => {
+    const response = await api.post('/payments/create', { orderId });
+    return response.data;
+  },
+  
+  // Get payment status
+  getPaymentStatus: async (orderId: string) => {
+    const response = await api.get(`/payments/status/${orderId}`);
     return response.data;
   }
 };

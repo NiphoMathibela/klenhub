@@ -1,27 +1,79 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Minus, Plus, X } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import { orderService, paymentService } from '../services/api';
 
 export const Cart = () => {
   const { state, dispatch } = useCart();
+  const { isAuthenticated } = useAuth();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const updateQuantity = (id: string, quantity: number) => {
-    dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity } });
+  const updateQuantity = (productId: string, size: string, quantity: number) => {
+    dispatch({ 
+      type: 'UPDATE_QUANTITY', 
+      payload: { 
+        productId, 
+        size, 
+        quantity: Math.max(1, quantity) 
+      } 
+    });
   };
 
-  const removeFromCart = (id: string) => {
-    dispatch({ type: 'REMOVE_FROM_CART', payload: id });
+  const removeFromCart = (productId: string, size: string) => {
+    dispatch({ 
+      type: 'REMOVE_FROM_CART', 
+      payload: { 
+        productId, 
+        size 
+      } 
+    });
   };
 
   const subtotal = state.items.reduce(
-    (sum, item) => sum + (item.product.salePrice || item.product.price) * item.quantity,
+    (sum, item) => sum + item.product.price * item.quantity,
     0
   );
 
-  const shipping = subtotal > 200 ? 0 : 15;
+  const shipping = subtotal > 800 ? 0 : 60;
   const total = subtotal + shipping;
+
+  const handleCheckout = async () => {
+    if (!isAuthenticated) {
+      setError('Please log in to checkout');
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      setError(null);
+
+      // 1. Create the order
+      const orderData = {
+        items: state.items.map(item => ({
+          productId: item.product.id,
+          quantity: item.quantity,
+          size: item.size
+        })),
+        total
+      };
+
+      const order = await orderService.createOrder(orderData);
+
+      // 2. Create PayFast payment
+      const payment = await paymentService.createPayment(order.id);
+
+      // 3. Redirect to PayFast
+      window.location.href = payment.redirectUrl;
+    } catch (err) {
+      console.error('Checkout error:', err);
+      setError('Failed to process checkout. Please try again.');
+      setIsProcessing(false);
+    }
+  };
 
   const fadeIn = {
     initial: { opacity: 0 },
@@ -77,7 +129,7 @@ export const Cart = () => {
                 {/* Product Image */}
                 <Link to={`/product/${item.product.id}`} className="aspect-[3/4] bg-gray-50">
                   <img
-                    src={item.product.images[0]}
+                    src={item.product.images.find(img => img.isMain)?.url || item.product.images[0]?.url}
                     alt={item.product.name}
                     className="w-full h-full object-cover object-center"
                   />
@@ -92,21 +144,20 @@ export const Cart = () => {
                     >
                       {item.product.name}
                     </Link>
-                    <p className="text-xs tracking-[0.1em] text-gray-500">{item.product.brand}</p>
                     <p className="text-xs tracking-[0.1em] text-gray-500">Size: {item.size}</p>
                   </div>
 
                   <div className="flex justify-between items-end">
                     <div className="flex items-center space-x-4">
                       <button
-                        onClick={() => updateQuantity(item.product.id, Math.max(1, item.quantity - 1))}
+                        onClick={() => updateQuantity(item.product.id, item.size, item.quantity - 1)}
                         className="p-1 hover:text-gray-600 transition-colors"
                       >
                         <Minus className="h-4 w-4" />
                       </button>
                       <span className="text-sm tracking-[0.1em]">{item.quantity}</span>
                       <button
-                        onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                        onClick={() => updateQuantity(item.product.id, item.size, item.quantity + 1)}
                         className="p-1 hover:text-gray-600 transition-colors"
                       >
                         <Plus className="h-4 w-4" />
@@ -114,24 +165,11 @@ export const Cart = () => {
                     </div>
 
                     <div className="flex items-center space-x-6">
-                      <div className="text-right">
-                        {item.product.salePrice ? (
-                          <>
-                            <p className="text-sm tracking-[0.1em] text-red-600">
-                              <Ri:art></Ri:art>{(item.product.salePrice * item.quantity).toFixed(2)}
-                            </p>
-                            <p className="text-xs tracking-[0.1em] text-gray-400 line-through">
-                              R{(item.product.price * item.quantity).toFixed(2)}
-                            </p>
-                          </>
-                        ) : (
-                          <p className="text-sm tracking-[0.1em]">
-                            R{(item.product.price * item.quantity).toFixed(2)}
-                          </p>
-                        )}
-                      </div>
+                      <p className="text-sm tracking-[0.1em]">
+                        R{(item.product.price * item.quantity).toFixed(2)}
+                      </p>
                       <button
-                        onClick={() => removeFromCart(item.product.id)}
+                        onClick={() => removeFromCart(item.product.id, item.size)}
                         className="p-1 text-gray-400 hover:text-black transition-colors"
                       >
                         <X className="h-4 w-4" />
@@ -155,7 +193,7 @@ export const Cart = () => {
                 </div>
                 <div className="flex justify-between tracking-[0.1em]">
                   <span>Shipping</span>
-                  <span>{shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}</span>
+                  <span>{shipping === 0 ? 'FREE' : `R${shipping.toFixed(2)}`}</span>
                 </div>
                 {shipping > 0 && (
                   <p className="text-xs text-gray-500 tracking-[0.05em]">
@@ -170,9 +208,37 @@ export const Cart = () => {
                 </div>
               </div>
 
-              <button className="w-full py-4 bg-black text-white text-sm tracking-[0.2em] hover:bg-gray-900 transition-colors">
-                PROCEED TO CHECKOUT
-              </button>
+              {error && (
+                <div className="text-red-500 text-sm tracking-[0.05em]">
+                  {error}
+                </div>
+              )}
+
+              {!isAuthenticated ? (
+                <div className="space-y-4">
+                  <Link 
+                    to="/login?redirect=/cart"
+                    className="block w-full py-4 bg-black text-white text-center text-sm tracking-[0.2em] hover:bg-gray-900 transition-colors"
+                  >
+                    LOGIN TO CHECKOUT
+                  </Link>
+                  <p className="text-xs text-gray-500 tracking-[0.05em] text-center">
+                    You need to be logged in to checkout
+                  </p>
+                </div>
+              ) : (
+                <button 
+                  onClick={handleCheckout}
+                  disabled={isProcessing}
+                  className={`w-full py-4 text-white text-sm tracking-[0.2em] transition-colors ${
+                    isProcessing 
+                      ? 'bg-gray-400 cursor-not-allowed' 
+                      : 'bg-black hover:bg-gray-900'
+                  }`}
+                >
+                  {isProcessing ? 'PROCESSING...' : 'PROCEED TO CHECKOUT'}
+                </button>
+              )}
 
               <Link 
                 to="/category/all"

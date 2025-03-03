@@ -15,6 +15,8 @@ import ShippingInfo from './pages/ShippingInfo';
 import { ProductDetail } from './pages/ProductDetail';
 import { CategoryPage } from './pages/CategoryPage';
 import { Cart } from './pages/Cart';
+import { PaymentSuccess } from './pages/PaymentSuccess';
+import { PaymentCancel } from './pages/PaymentCancel';
 import Contact from './pages/Contact';
 import SizeGuide from './pages/SizeGuide';
 import AdminLayout from './components/AdminLayout';
@@ -61,13 +63,15 @@ const App = () => {
               <Route path="contact" element={<Contact />} />
               <Route path="size-guide" element={<SizeGuide />} />
               
+              {/* Payment routes */}
+              <Route path="payment/success" element={<PaymentSuccess />} />
+              <Route path="payment/cancel" element={<PaymentCancel />} />
+              
               {/* Protected customer routes */}
               <Route
                 path="cart"
                 element={
-                  <ProtectedRoute>
-                    <Cart />
-                  </ProtectedRoute>
+                  <Cart />
                 }
               />
             </Route>
