@@ -15,6 +15,8 @@ import ShippingInfo from './pages/ShippingInfo';
 import { ProductDetail } from './pages/ProductDetail';
 import { CategoryPage } from './pages/CategoryPage';
 import { Cart } from './pages/Cart';
+import { Checkout } from './pages/Checkout';
+import { OrderHistory } from './pages/OrderHistory';
 import { PaymentSuccess } from './pages/PaymentSuccess';
 import { PaymentCancel } from './pages/PaymentCancel';
 import Contact from './pages/Contact';
@@ -68,11 +70,22 @@ const App = () => {
               <Route path="payment/cancel" element={<PaymentCancel />} />
               
               {/* Protected customer routes */}
-              <Route
-                path="cart"
+              <Route path="cart" element={<Cart />} />
+              <Route 
+                path="checkout" 
                 element={
-                  <Cart />
-                }
+                  <ProtectedRoute>
+                    <Checkout />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="orders" 
+                element={
+                  <ProtectedRoute>
+                    <OrderHistory />
+                  </ProtectedRoute>
+                } 
               />
             </Route>
           </Routes>

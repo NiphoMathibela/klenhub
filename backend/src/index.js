@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const sequelize = require('./config/database');
 require('dotenv').config();
 
@@ -8,18 +9,24 @@ const authRoutes = require('./routes/auth');
 const productRoutes = require('./routes/products');
 const orderRoutes = require('./routes/orders');
 const paymentRoutes = require('./routes/payments');
+const dashboardRoutes = require('./routes/dashboard');
 
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Serve static files from the uploads directory
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -32,9 +39,9 @@ const PORT = process.env.PORT || 3000;
 // Sync database and start server
 const start = async () => {
   try {
-    // Sync without force to preserve data
-    await sequelize.sync();
-    console.log('Database connected successfully');
+    // Force sync to update schema
+    await sequelize.sync({ alter: true });
+    console.log('Database connected and schema updated successfully');
     
     // Create admin user if it doesn't exist
     const User = require('./models/User');

@@ -1,6 +1,7 @@
-import React, { useState, useCallback } from 'react';
-import { X, Upload, Image as ImageIcon, Link as LinkIcon, Plus } from 'lucide-react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { X, Upload, Image as ImageIcon, Link as LinkIcon, Plus, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
+import { productService } from '../services/api';
 
 interface Size {
   size: string;
@@ -44,11 +45,28 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     sizes: [],
     images: []
   });
-  const [errors, setErrors] = useState<Partial<Record<keyof ProductFormData, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof ProductFormData | 'imageUrl', string>>>({});
   const [imageUrl, setImageUrl] = useState('');
   const [showImageUrlInput, setShowImageUrlInput] = useState(false);
+  const [useUrlUpload, setUseUrlUpload] = useState(false);
+  const [isTestingUrl, setIsTestingUrl] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [urlInputStatus, setUrlInputStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [urlInputMessage, setUrlInputMessage] = useState('');
+
+  useEffect(() => {
+    // If we have files to upload when submitting the form
+    if (uploadedFiles.length > 0 && !isLoading) {
+      // Reset the uploaded files after form submission
+      setUploadedFiles([]);
+    }
+  }, [isLoading, uploadedFiles.length]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
+    // Store the files for later upload
+    setUploadedFiles(prev => [...prev, ...acceptedFiles]);
+    
+    // Preview the files immediately
     acceptedFiles.forEach(file => {
       const reader = new FileReader();
       reader.onload = () => {
@@ -78,7 +96,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'price' ? parseFloat(value) : name === 'category' ? value.toLowerCase() : value
+      [name]: name === 'price' ? parseFloat(value) : value
     }));
     setErrors(prev => ({ ...prev, [name]: '' }));
   };
@@ -105,9 +123,20 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   const handleImageRemove = (index: number) => {
     setFormData(prev => {
       const newImages = prev.images.filter((_, i) => i !== index);
+      
+      // If we're removing an image with a file, also remove it from uploadedFiles
+      const imageToRemove = prev.images[index];
+      if (imageToRemove.file) {
+        setUploadedFiles(prevFiles => 
+          prevFiles.filter(file => file !== imageToRemove.file)
+        );
+      }
+      
+      // Update main image if needed
       if (prev.images[index].isMain && newImages.length > 0) {
         newImages[0].isMain = true;
       }
+      
       return { ...prev, images: newImages };
     });
   };
@@ -122,33 +151,111 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     }));
   };
 
-  const handleAddImageUrl = () => {
-    if (!imageUrl.trim()) return;
-
+  const testImageUrl = async (url: string) => {
+    if (!url.trim()) return false;
+    
     // Basic URL validation
     try {
-      new URL(imageUrl);
+      new URL(url);
     } catch (e) {
       setErrors(prev => ({ ...prev, imageUrl: 'Please enter a valid URL' }));
+      setUrlInputStatus('error');
+      setUrlInputMessage('Invalid URL format');
+      return false;
+    }
+    
+    // Check if URL is an image URL (common image extensions)
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp'];
+    const urlLower = url.toLowerCase();
+    const hasImageExtension = imageExtensions.some(ext => 
+      urlLower.endsWith(ext) || urlLower.includes(`${ext}?`)
+    );
+    
+    if (!hasImageExtension) {
+      console.log('URL does not have a common image extension:', url);
+      // We'll still try to load it, but warn the user
+      setUrlInputMessage('URL does not appear to be an image, but we\'ll try to load it');
+    }
+    
+    // Test if the image can be loaded
+    setIsTestingUrl(true);
+    setUrlInputStatus('loading');
+    setUrlInputMessage('Testing image URL...');
+    
+    return new Promise<boolean>((resolve) => {
+      const img = new Image();
+      let timeoutId: NodeJS.Timeout;
+      
+      img.onload = () => {
+        setIsTestingUrl(false);
+        setErrors(prev => ({ ...prev, imageUrl: undefined }));
+        setUrlInputStatus('success');
+        setUrlInputMessage('Image URL is valid');
+        clearTimeout(timeoutId);
+        resolve(true);
+      };
+      
+      img.onerror = () => {
+        setIsTestingUrl(false);
+        setErrors(prev => ({ ...prev, imageUrl: 'Could not load image from URL' }));
+        setUrlInputStatus('error');
+        setUrlInputMessage('Could not load image from this URL. The server may block direct access.');
+        clearTimeout(timeoutId);
+        resolve(false);
+      };
+      
+      // Add crossorigin attribute to handle CORS issues
+      img.crossOrigin = 'anonymous';
+      img.src = url;
+      
+      // Set a timeout in case the image takes too long to load
+      timeoutId = setTimeout(() => {
+        if (img.complete) return;
+        
+        setIsTestingUrl(false);
+        setErrors(prev => ({ ...prev, imageUrl: 'Image loading timed out' }));
+        setUrlInputStatus('error');
+        setUrlInputMessage('Image loading timed out. The URL may still work on the server.');
+        resolve(true); // Allow it anyway, the server will handle it
+      }, 10000);
+    });
+  };
+
+  const handleAddImageUrl = async () => {
+    if (!imageUrl.trim()) return;
+    
+    // Sanitize URL - remove query parameters if needed
+    let sanitizedUrl = imageUrl.trim();
+    
+    // Basic URL validation
+    try {
+      new URL(sanitizedUrl);
+    } catch (e) {
+      setErrors(prev => ({ ...prev, imageUrl: 'Please enter a valid URL' }));
+      setUrlInputStatus('error');
+      setUrlInputMessage('Invalid URL format');
       return;
     }
-
+    
+    const isValid = await testImageUrl(sanitizedUrl);
+    if (!isValid) return;
+    
     setFormData(prev => ({
       ...prev,
       images: [...prev.images, {
-        url: imageUrl,
+        url: sanitizedUrl,
         isMain: prev.images.length === 0
       }]
     }));
-
-    // Reset the input
+    
+    // Reset the input and status
     setImageUrl('');
-    setShowImageUrlInput(false);
-    setErrors(prev => ({ ...prev, imageUrl: undefined }));
+    setUrlInputStatus('idle');
+    setUrlInputMessage('');
   };
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<Record<keyof ProductFormData, string>> = {};
+    const newErrors: Partial<Record<keyof ProductFormData | 'imageUrl', string>> = {};
 
     if (!formData.name.trim()) newErrors.name = 'Name is required';
     if (!formData.description.trim()) newErrors.description = 'Description is required';
@@ -161,9 +268,47 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
+    if (!validateForm()) return;
+    
+    // If we have files to upload, process them first
+    if (uploadedFiles.length > 0) {
+      try {
+        const uploadedImages = await productService.uploadProductImages(uploadedFiles);
+        
+        // Update the formData with the uploaded image paths
+        const updatedImages = formData.images.map(image => {
+          if (image.file) {
+            // Find the corresponding uploaded file
+            const uploadedFile = uploadedImages.find(
+              uploaded => uploaded.filename === image.file?.name || 
+                         uploaded.mimetype === image.file?.type
+            );
+            
+            if (uploadedFile) {
+              // Return the image with the server path instead of the data URL
+              return {
+                ...image,
+                url: uploadedFile.path,
+                file: undefined // Remove the file reference as it's now uploaded
+              };
+            }
+          }
+          return image;
+        });
+        
+        // Submit the form with the updated images
+        onSubmit({
+          ...formData,
+          images: updatedImages
+        });
+      } catch (error) {
+        console.error('Error uploading images:', error);
+        setErrors(prev => ({ ...prev, images: 'Failed to upload images. Please try again.' }));
+      }
+    } else {
+      // No files to upload, just submit the form as is
       onSubmit(formData);
     }
   };
@@ -264,55 +409,111 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           <div>
             <div className="flex justify-between items-center mb-2">
               <label className="block text-sm font-medium text-gray-700">Images</label>
-              <button
-                type="button"
-                onClick={() => setShowImageUrlInput(!showImageUrlInput)}
-                className="inline-flex items-center text-sm text-gray-700 hover:text-black"
-              >
-                <LinkIcon className="w-4 h-4 mr-1" />
-                {showImageUrlInput ? 'Hide URL Input' : 'Add Image URL'}
-              </button>
-            </div>
-
-            {showImageUrlInput && (
-              <div className="mb-4 flex">
-                <input
-                  type="text"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="Enter image URL"
-                  className={`flex-grow rounded-l-md border ${
-                    errors.imageUrl ? 'border-red-500' : 'border-gray-300'
-                  } shadow-sm focus:border-black focus:ring-black sm:text-sm`}
-                />
+              <div className="flex items-center space-x-4">
                 <button
                   type="button"
-                  onClick={handleAddImageUrl}
-                  className="bg-black text-white px-3 py-2 rounded-r-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2"
+                  onClick={() => {
+                    setUseUrlUpload(!useUrlUpload);
+                    setUrlInputStatus('idle');
+                    setUrlInputMessage('');
+                  }}
+                  className="inline-flex items-center text-sm text-gray-700 hover:text-black"
                 >
-                  <Plus className="w-4 h-4" />
+                  {useUrlUpload ? (
+                    <>
+                      <ToggleRight className="w-5 h-5 mr-1 text-black" />
+                      URL Mode
+                    </>
+                  ) : (
+                    <>
+                      <ToggleLeft className="w-5 h-5 mr-1 text-gray-400" />
+                      File Mode
+                    </>
+                  )}
                 </button>
-              </div>
-            )}
-            {errors.imageUrl && <p className="mt-1 text-sm text-red-500 mb-2">{errors.imageUrl}</p>}
-
-            <div
-              {...getRootProps()}
-              className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
-                isDragActive ? 'border-black bg-gray-50' : 'border-gray-300'
-              }`}
-            >
-              <input {...getInputProps()} />
-              <div className="space-y-2">
-                <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
-                <p className="text-sm text-gray-600">
-                  {isDragActive
-                    ? 'Drop the images here...'
-                    : 'Drag & drop images here, or click to select files'}
-                </p>
-                <p className="text-xs text-gray-500">Supports: PNG, JPG, JPEG, WebP</p>
+                {useUrlUpload && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowImageUrlInput(!showImageUrlInput);
+                      setUrlInputStatus('idle');
+                      setUrlInputMessage('');
+                    }}
+                    className="inline-flex items-center text-sm text-gray-700 hover:text-black"
+                  >
+                    <LinkIcon className="w-4 h-4 mr-1" />
+                    {showImageUrlInput ? 'Hide URL Input' : 'Add Image URL'}
+                  </button>
+                )}
               </div>
             </div>
+
+            {useUrlUpload && showImageUrlInput && (
+              <div className="mb-4 space-y-2">
+                <div className="flex">
+                  <input
+                    type="text"
+                    value={imageUrl}
+                    onChange={(e) => {
+                      setImageUrl(e.target.value);
+                      if (urlInputStatus !== 'idle') {
+                        setUrlInputStatus('idle');
+                        setUrlInputMessage('');
+                      }
+                    }}
+                    placeholder="Enter image URL"
+                    className={`flex-grow rounded-l-md border ${
+                      urlInputStatus === 'error' ? 'border-red-500' : 
+                      urlInputStatus === 'success' ? 'border-green-500' : 'border-gray-300'
+                    } shadow-sm focus:border-black focus:ring-black sm:text-sm`}
+                    disabled={isTestingUrl}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddImageUrl}
+                    disabled={isTestingUrl || !imageUrl.trim()}
+                    className="bg-black text-white px-3 py-2 rounded-r-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isTestingUrl ? (
+                      <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    ) : (
+                      <Plus className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+                {urlInputMessage && (
+                  <p className={`text-sm ${
+                    urlInputStatus === 'error' ? 'text-red-500' : 
+                    urlInputStatus === 'success' ? 'text-green-500' : 'text-gray-500'
+                  }`}>
+                    {urlInputMessage}
+                  </p>
+                )}
+                <p className="text-xs text-gray-500">
+                  Tip: Enter a direct URL to an image (e.g., ending with .jpg, .png, etc.)
+                </p>
+              </div>
+            )}
+
+            {!useUrlUpload && (
+              <div
+                {...getRootProps()}
+                className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+                  isDragActive ? 'border-black bg-gray-50' : 'border-gray-300'
+                }`}
+              >
+                <input {...getInputProps()} />
+                <div className="space-y-2">
+                  <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
+                  <p className="text-sm text-gray-600">
+                    {isDragActive
+                      ? 'Drop the images here...'
+                      : 'Drag & drop images here, or click to select files'}
+                  </p>
+                  <p className="text-xs text-gray-500">Supports: PNG, JPG, JPEG, WebP</p>
+                </div>
+              </div>
+            )}
             {errors.images && <p className="mt-1 text-sm text-red-500">{errors.images}</p>}
 
             <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">

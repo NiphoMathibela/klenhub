@@ -45,37 +45,44 @@ const generatePaymentData = (order, user) => {
     throw new Error(`Invalid order total: ${order.total}`);
   }
   
-  // Create payment data object
+  // Format user name properly
+  const nameParts = user.name.split(' ');
+  const firstName = nameParts[0] || '';
+  const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+  
+  // Create payment data object with required fields
   const data = {
     // Merchant details
     merchant_id: config.merchantId,
     merchant_key: config.merchantKey,
     
     // Transaction details
-    m_payment_id: order.id,
+    m_payment_id: String(order.id),
     amount: amount,
     item_name: `Order #${order.id}`,
     
     // User details
     email_address: user.email,
-    name_first: user.name.split(' ')[0],
-    name_last: user.name.split(' ').slice(1).join(' ') || '',
+    name_first: firstName,
+    name_last: lastName,
     
     // URLs
     return_url: config.returnUrl,
     cancel_url: config.cancelUrl,
     notify_url: config.notifyUrl,
-    
-    // Optional settings
-    email_confirmation: 1,
-    confirmation_address: user.email
   };
-
+  
+  // Add optional fields
+  if (user.email) {
+    data.email_confirmation = '1';
+    data.confirmation_address = user.email;
+  }
+  
   // Add test mode if enabled
   if (config.testMode) {
-    data.test_payment = 1;
+    data.test_payment = '1';
   }
-
+  
   return data;
 };
 
@@ -85,21 +92,33 @@ const generatePaymentData = (order, user) => {
  * @returns {string} MD5 signature
  */
 const generateSignature = (data) => {
-  // Create a string of key=value pairs sorted alphabetically
-  const sortedData = {};
-  Object.keys(data).sort().forEach(key => {
-    sortedData[key] = data[key];
-  });
-
-  const dataString = querystring.stringify(sortedData);
+  // Create a copy of the data without the signature field
+  const signatureData = { ...data };
+  delete signatureData.signature;
   
-  // Add passphrase if it exists
-  const signatureString = config.passPhrase 
-    ? `${dataString}&passphrase=${encodeURIComponent(config.passPhrase)}`
-    : dataString;
+  // Sort the keys alphabetically
+  const keys = Object.keys(signatureData).sort();
+  
+  // Build the signature string
+  let signatureString = '';
+  keys.forEach(key => {
+    if (signatureData[key] !== '') {
+      signatureString += `${key}=${encodeURIComponent(signatureData[key]).replace(/%20/g, '+')}&`;
+    }
+  });
+  
+  // Remove the trailing & and add the passphrase if it exists
+  signatureString = signatureString.slice(0, -1);
+  if (config.passPhrase) {
+    signatureString += `&passphrase=${encodeURIComponent(config.passPhrase).replace(/%20/g, '+')}`;
+  }
+  
+  console.log('Signature string:', signatureString);
   
   // Generate MD5 hash
-  return crypto.createHash('md5').update(signatureString).digest('hex');
+  const signature = crypto.createHash('md5').update(signatureString).digest('hex');
+  
+  return signature;
 };
 
 /**
@@ -110,14 +129,31 @@ const generateSignature = (data) => {
  */
 const createPayment = (order, user) => {
   const paymentData = generatePaymentData(order, user);
+  
+  console.log('Payment data before signature:', JSON.stringify(paymentData, null, 2));
+  
   const signature = generateSignature(paymentData);
+  console.log('Generated signature:', signature);
   
   // Add signature to payment data
   paymentData.signature = signature;
   
+  // Build the query string manually to ensure proper encoding
+  let queryString = '';
+  Object.keys(paymentData).forEach(key => {
+    if (paymentData[key] !== '') {
+      queryString += `${key}=${encodeURIComponent(paymentData[key]).replace(/%20/g, '+')}&`;
+    }
+  });
+  
+  // Remove the trailing &
+  queryString = queryString.slice(0, -1);
+  
+  console.log('Final redirect URL:', `${config.apiUrl}?${queryString}`);
+  
   return {
     paymentData,
-    redirectUrl: `${config.apiUrl}?${querystring.stringify(paymentData)}`
+    redirectUrl: `${config.apiUrl}?${queryString}`
   };
 };
 

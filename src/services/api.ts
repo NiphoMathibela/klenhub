@@ -69,75 +69,60 @@ export const productService = {
     const response = await api.get(`/products/category/${category}`);
     return response.data;
   },
+  // Search products
+  searchProducts: async (query: string) => {
+    const response = await api.get(`/products/search?q=${query}`);
+    return response.data;
+  },
   // Create new product (admin only)
   createProduct: async (productData: any) => {
-    // Process images - convert File objects to URLs or keep existing URLs
-    const processedData = {
+    // Clean up the product data before sending to the API
+    const cleanedData = {
       ...productData,
-      images: await Promise.all(
-        productData.images.map(async (image: any) => {
-          // If the image already has a URL and no file, use it directly
-          if (image.url && !image.file) {
-            return {
-              url: image.url,
-              isMain: image.isMain
-            };
-          }
-          
-          // If it has a file, we need to handle it
-          if (image.file) {
-            // For now, we're just passing the data URL
-            // In a real app, you would upload to a server or cloud storage
-            return {
-              url: image.url, // This is already a data URL from FileReader
-              isMain: image.isMain
-            };
-          }
-          
-          return image;
-        })
-      )
+      // Remove file objects from images
+      images: productData.images.map((image: any) => ({
+        url: image.url,
+        isMain: image.isMain
+      }))
     };
     
-    const response = await api.post('/products', processedData);
+    const response = await api.post('/products', cleanedData);
     return response.data;
   },
   // Update product (admin only)
   updateProduct: async (id: string, productData: any) => {
-    // Process images - convert File objects to URLs or keep existing URLs
-    const processedData = {
+    // Clean up the product data before sending to the API
+    const cleanedData = {
       ...productData,
-      images: await Promise.all(
-        productData.images.map(async (image: any) => {
-          // If the image already has a URL and no file, use it directly
-          if (image.url && !image.file) {
-            return {
-              url: image.url,
-              isMain: image.isMain
-            };
-          }
-          
-          // If it has a file, we need to handle it
-          if (image.file) {
-            // For now, we're just passing the data URL
-            // In a real app, you would upload to a server or cloud storage
-            return {
-              url: image.url, // This is already a data URL from FileReader
-              isMain: image.isMain
-            };
-          }
-          
-          return image;
-        })
-      )
+      // Remove file objects from images
+      images: productData.images.map((image: any) => ({
+        id: image.id, // Keep the ID for existing images
+        url: image.url,
+        isMain: image.isMain
+      }))
     };
     
-    const response = await api.put(`/products/${id}`, processedData);
+    const response = await api.put(`/products/${id}`, cleanedData);
     return response.data;
   },
   // Delete product (admin only)
   deleteProduct: async (id: string) => {
     const response = await api.delete(`/products/${id}`);
+    return response.data;
+  },
+  // Upload product images
+  uploadProductImages: async (files: File[]) => {
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append('images', file);
+    });
+    
+    const response = await api.post('/products/upload-images', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    
     return response.data;
   }
 };
@@ -163,6 +148,14 @@ export const orderService = {
   createOrder: async (orderData: {
     items: Array<{ productId: string; quantity: number; size: string }>;
     total: number;
+    recipientName: string;
+    phoneNumber: string;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    province: string;
+    postalCode: string;
+    deliveryInstructions?: string;
   }) => {
     const response = await api.post('/orders', orderData);
     return response.data;
@@ -170,13 +163,13 @@ export const orderService = {
   
   // Get all orders (admin only)
   getOrders: async () => {
-    const response = await api.get('/orders');
+    const response = await api.get('/orders/admin');
     return response.data;
   },
   
   // Get user's orders
   getUserOrders: async () => {
-    const response = await api.get('/orders/user');
+    const response = await api.get('/orders/my-orders');
     return response.data;
   },
   
@@ -189,6 +182,12 @@ export const orderService = {
   // Update order status (admin only)
   updateOrderStatus: async (id: string, status: string) => {
     const response = await api.patch(`/orders/${id}/status`, { status });
+    return response.data;
+  },
+
+  // Update tracking number (admin only)
+  updateTrackingNumber: async (id: string, trackingNumber: string) => {
+    const response = await api.patch(`/orders/${id}/tracking`, { trackingNumber });
     return response.data;
   }
 };

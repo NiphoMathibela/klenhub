@@ -84,12 +84,37 @@ exports.createProduct = async (req, res) => {
 
     // Add images if provided
     if (images && images.length > 0) {
+      const { processImage } = require('../utils/imageUtils');
+      
       await Promise.all(
-        images.map((image, index) => ProductImage.create({
-          productId: product.id,
-          imageUrl: image.url,
-          isMain: index === 0 // First image is main by default
-        }))
+        images.map(async (image, index) => {
+          try {
+            console.log('Processing image:', image);
+            
+            // Process the image (either URL or file)
+            let imageUrl;
+            
+            if (image.path) {
+              // Already processed by multer
+              imageUrl = image.path;
+            } else {
+              // URL-based image that needs processing
+              imageUrl = await processImage(image);
+              console.log('Image processed successfully:', imageUrl);
+            }
+            
+            // Save the image URL to the database
+            await ProductImage.create({
+              productId: product.id,
+              imageUrl: imageUrl,
+              isMain: index === 0 // First image is main by default
+            });
+          } catch (error) {
+            console.error('Error processing image:', error.message);
+            console.error('Image data:', JSON.stringify(image));
+            // Continue with other images even if one fails
+          }
+        })
       );
     }
 
@@ -124,7 +149,7 @@ exports.updateProduct = async (req, res) => {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    // Update main product info
+    // Update basic product info
     await product.update({
       name: name || product.name,
       description: description || product.description,
@@ -133,10 +158,10 @@ exports.updateProduct = async (req, res) => {
     });
 
     // Update sizes if provided
-    if (sizes) {
-      // Remove existing sizes
+    if (sizes && sizes.length > 0) {
+      // Delete existing sizes
       await ProductSize.destroy({ where: { productId: product.id } });
-      
+
       // Add new sizes
       await Promise.all(
         sizes.map(size => ProductSize.create({
@@ -149,22 +174,95 @@ exports.updateProduct = async (req, res) => {
 
     // Update images if provided
     if (images && images.length > 0) {
-      // Remove existing images
-      await ProductImage.destroy({ where: { productId: product.id } });
+      const { processImage } = require('../utils/imageUtils');
       
-      // Add new images
+      // Get existing images
+      const existingImages = await ProductImage.findAll({
+        where: { productId: product.id }
+      });
+      
+      // Get existing image URLs to avoid re-downloading
+      const existingImageUrls = existingImages.map(img => img.imageUrl);
+      
+      // Delete existing images if they're not in the new set
       await Promise.all(
-        images.map((image, index) => {
-          // Handle both URL string and data URL formats
-          const imageUrl = image.url || image.imageUrl;
-          if (!imageUrl) {
-            throw new Error('Image URL is required');
+        existingImages.map(async (img) => {
+          const isInNewSet = images.some(newImg => 
+            (newImg.id && newImg.id === img.id) || 
+            (newImg.path && newImg.path === img.imageUrl) ||
+            (newImg.url && newImg.url === img.imageUrl)
+          );
+          
+          if (!isInNewSet) {
+            // If the image is stored on the server, delete the file
+            if (img.imageUrl.startsWith('/uploads/')) {
+              try {
+                const fs = require('fs');
+                const path = require('path');
+                const filePath = path.join(__dirname, '../..', img.imageUrl);
+                if (fs.existsSync(filePath)) {
+                  fs.unlinkSync(filePath);
+                }
+              } catch (err) {
+                console.error('Error deleting image file:', err);
+                // Continue even if file deletion fails
+              }
+            }
+            
+            // Delete the database record
+            await img.destroy();
           }
-          return ProductImage.create({
-            productId: product.id,
-            imageUrl: imageUrl,
-            isMain: image.isMain || index === 0
-          });
+        })
+      );
+      
+      // Add or update images
+      await Promise.all(
+        images.map(async (image, index) => {
+          try {
+            // If the image already exists in the database
+            if (image.id) {
+              const existingImage = existingImages.find(img => img.id === image.id);
+              if (existingImage) {
+                await existingImage.update({
+                  isMain: image.isMain || index === 0
+                });
+                return;
+              }
+            }
+            
+            // If it's a new image with a path (already uploaded)
+            if (image.path) {
+              await ProductImage.create({
+                productId: product.id,
+                imageUrl: image.path,
+                isMain: image.isMain || index === 0
+              });
+              return;
+            }
+            
+            // If it's a URL that's already in our database
+            if (image.url && existingImageUrls.includes(image.url)) {
+              const existingImage = existingImages.find(img => img.imageUrl === image.url);
+              if (existingImage) {
+                await existingImage.update({
+                  isMain: image.isMain || index === 0
+                });
+                return;
+              }
+            }
+            
+            // Otherwise, process the new image
+            const imageUrl = await processImage(image);
+            
+            await ProductImage.create({
+              productId: product.id,
+              imageUrl: imageUrl,
+              isMain: image.isMain || index === 0
+            });
+          } catch (error) {
+            console.error('Error processing image during update:', error);
+            // Continue with other images even if one fails
+          }
         })
       );
     }
@@ -186,9 +284,6 @@ exports.updateProduct = async (req, res) => {
     res.json(updatedProduct);
   } catch (error) {
     console.error('Error updating product:', error);
-    if (error.name === 'ValidationError' || error.name === 'SequelizeValidationError') {
-      return res.status(400).json({ error: error.message });
-    }
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -196,16 +291,43 @@ exports.updateProduct = async (req, res) => {
 // Delete product
 exports.deleteProduct = async (req, res) => {
   try {
-    const product = await Product.findByPk(req.params.id);
+    const product = await Product.findByPk(req.params.id, {
+      include: [
+        {
+          model: ProductImage,
+          as: 'images'
+        }
+      ]
+    });
 
     if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    // This will also delete associated sizes and images due to CASCADE
+    // Delete associated image files from the server
+    if (product.images && product.images.length > 0) {
+      const fs = require('fs');
+      const path = require('path');
+      
+      product.images.forEach(image => {
+        if (image.imageUrl.startsWith('/uploads/')) {
+          try {
+            const filePath = path.join(__dirname, '../..', image.imageUrl);
+            if (fs.existsSync(filePath)) {
+              fs.unlinkSync(filePath);
+            }
+          } catch (err) {
+            console.error('Error deleting image file:', err);
+            // Continue even if file deletion fails
+          }
+        }
+      });
+    }
+
+    // Delete the product (this will cascade delete associated records)
     await product.destroy();
 
-    res.json({ message: 'Product deleted' });
+    res.json({ message: 'Product deleted successfully' });
   } catch (error) {
     console.error('Error deleting product:', error);
     res.status(500).json({ error: 'Server error' });
@@ -299,6 +421,28 @@ exports.searchProducts = async (req, res) => {
     res.json(products);
   } catch (error) {
     console.error('Error searching products:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Handle product image uploads
+exports.uploadProductImages = async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: 'No files uploaded' });
+    }
+
+    // Transform the files to include URLs
+    const uploadedFiles = req.files.map(file => ({
+      filename: file.filename,
+      path: `/uploads/products/${file.filename}`,
+      mimetype: file.mimetype,
+      size: file.size
+    }));
+
+    res.status(200).json(uploadedFiles);
+  } catch (error) {
+    console.error('Error uploading images:', error);
     res.status(500).json({ error: 'Server error' });
   }
 };

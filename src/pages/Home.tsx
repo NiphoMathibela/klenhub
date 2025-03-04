@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ProductGrid } from '../components/ProductGrid';
 import { Hero } from '../components/Hero';
+import { ProductCard } from '../components/ProductCard';
 import { SortOption, Product } from '../types';
 import axios from 'axios';
 

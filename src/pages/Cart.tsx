@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Minus, Plus, X } from 'lucide-react';
 import { useCart } from '../context/CartContext';
@@ -11,6 +11,7 @@ export const Cart = () => {
   const { isAuthenticated } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const updateQuantity = (productId: string, size: string, quantity: number) => {
     dispatch({ 
@@ -41,38 +42,14 @@ export const Cart = () => {
   const shipping = subtotal > 800 ? 0 : 60;
   const total = subtotal + shipping;
 
-  const handleCheckout = async () => {
+  const handleCheckout = () => {
     if (!isAuthenticated) {
       setError('Please log in to checkout');
       return;
     }
-
-    try {
-      setIsProcessing(true);
-      setError(null);
-
-      // 1. Create the order
-      const orderData = {
-        items: state.items.map(item => ({
-          productId: item.product.id,
-          quantity: item.quantity,
-          size: item.size
-        })),
-        total
-      };
-
-      const order = await orderService.createOrder(orderData);
-
-      // 2. Create PayFast payment
-      const payment = await paymentService.createPayment(order.id);
-
-      // 3. Redirect to PayFast
-      window.location.href = payment.redirectUrl;
-    } catch (err) {
-      console.error('Checkout error:', err);
-      setError('Failed to process checkout. Please try again.');
-      setIsProcessing(false);
-    }
+    
+    // Redirect to checkout page
+    navigate('/checkout');
   };
 
   const fadeIn = {
@@ -129,7 +106,7 @@ export const Cart = () => {
                 {/* Product Image */}
                 <Link to={`/product/${item.product.id}`} className="aspect-[3/4] bg-gray-50">
                   <img
-                    src={item.product.images.find(img => img.isMain)?.url || item.product.images[0]?.url}
+                    src={item.product.images.find(img => img.isMain)?.imageUrl || item.product.images[0]?.imageUrl}
                     alt={item.product.name}
                     className="w-full h-full object-cover object-center"
                   />

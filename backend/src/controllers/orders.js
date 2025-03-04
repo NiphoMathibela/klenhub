@@ -9,11 +9,32 @@ exports.createOrder = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { items, total } = req.body;
+    const { 
+      items, 
+      total, 
+      // Delivery details
+      recipientName,
+      phoneNumber,
+      addressLine1,
+      addressLine2,
+      city,
+      province,
+      postalCode,
+      deliveryInstructions
+    } = req.body;
 
     const order = await Order.create({
       userId: req.user.id,
-      total
+      total,
+      // Add delivery details to order
+      recipientName,
+      phoneNumber,
+      addressLine1,
+      addressLine2,
+      city,
+      province,
+      postalCode,
+      deliveryInstructions
     });
 
     for (const item of items) {
@@ -128,6 +149,26 @@ exports.getUserOrders = async (req, res) => {
     res.json(orders);
   } catch (error) {
     console.error('Get user orders error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Update tracking number - admin only
+exports.updateTrackingNumber = async (req, res) => {
+  try {
+    const { trackingNumber } = req.body;
+    const order = await Order.findByPk(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    order.trackingNumber = trackingNumber;
+    await order.save();
+
+    res.json(order);
+  } catch (error) {
+    console.error('Update tracking number error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 };

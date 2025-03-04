@@ -22,6 +22,43 @@ const Order = sequelize.define('Order', {
   total: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false
+  },
+  // Delivery details
+  recipientName: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  phoneNumber: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  addressLine1: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  addressLine2: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  city: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  province: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  postalCode: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  deliveryInstructions: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  trackingNumber: {
+    type: DataTypes.STRING,
+    allowNull: true
   }
 });
 
