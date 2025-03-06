@@ -1,8 +1,8 @@
 const { Order } = require('../models/Order');
-const payfastService = require('../services/payfast');
+const paystackService = require('../services/paystack');
 
 /**
- * Create a PayFast payment for an order
+ * Initialize a Paystack payment for an order
  * @param {Object} req - Request object
  * @param {Object} res - Response object
  */
@@ -29,17 +29,20 @@ exports.createPayment = async (req, res) => {
     const orderData = order.get({ plain: true });
     console.log(`Order data prepared: ${JSON.stringify(orderData)}`);
     
-    // Create PayFast payment
-    const payment = payfastService.createPayment(orderData, req.user);
-    console.log(`Payment created, redirecting to: ${payment.redirectUrl}`);
+    // Initialize Paystack transaction
+    const payment = await paystackService.initializeTransaction(orderData, req.user);
+    console.log(`Payment initialized, redirecting to: ${payment.authorizationUrl}`);
     
     // Update order status
-    await order.update({ status: 'processing' });
+    await order.update({ 
+      status: 'pending',
+      paymentReference: payment.reference 
+    });
     
     res.json({
       success: true,
-      redirectUrl: payment.redirectUrl,
-      paymentData: payment.paymentData
+      redirectUrl: payment.authorizationUrl,
+      reference: payment.reference
     });
   } catch (error) {
     console.error('Payment creation error:', error);
@@ -48,52 +51,77 @@ exports.createPayment = async (req, res) => {
 };
 
 /**
- * Handle PayFast ITN (Instant Transaction Notification)
+ * Verify Paystack payment
  * @param {Object} req - Request object
  * @param {Object} res - Response object
  */
-exports.handleNotification = async (req, res) => {
+exports.verifyPayment = async (req, res) => {
   try {
-    const payload = req.body;
+    const { reference } = req.query;
     
-    // Verify ITN
-    const isValid = await payfastService.verifyItn(payload, req.headers);
-    if (!isValid) {
-      return res.status(400).send('Invalid ITN');
+    if (!reference) {
+      return res.status(400).json({ error: 'Reference is required' });
     }
     
-    // Get order ID from m_payment_id
-    const orderId = payload.m_payment_id;
-    const order = await Order.findByPk(orderId);
+    // Verify payment
+    const verification = await paystackService.verifyTransaction(reference);
+    
+    // Find order by payment reference
+    const order = await Order.findOne({ 
+      where: { paymentReference: reference }
+    });
     
     if (!order) {
-      return res.status(404).send('Order not found');
+      return res.status(404).json({ error: 'Order not found' });
     }
     
     // Update order status based on payment status
-    const paymentStatus = payload.payment_status;
-    let orderStatus;
-    
-    switch (paymentStatus) {
-      case 'COMPLETE':
-        orderStatus = 'processing';
-        break;
-      case 'FAILED':
-        orderStatus = 'cancelled';
-        break;
-      case 'PENDING':
-        orderStatus = 'pending';
-        break;
-      default:
-        orderStatus = 'pending';
+    if (verification.status === 'success') {
+      await order.update({ status: 'processing' });
+    } else {
+      await order.update({ status: 'pending' });
     }
     
-    await order.update({ status: orderStatus });
+    res.json({
+      success: true,
+      order,
+      verification
+    });
+  } catch (error) {
+    console.error('Payment verification error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+/**
+ * Handle Paystack webhook
+ * @param {Object} req - Request object
+ * @param {Object} res - Response object
+ */
+exports.handleWebhook = async (req, res) => {
+  try {
+    // Get signature from headers
+    const signature = req.headers['x-paystack-signature'];
     
-    // Respond with OK (PayFast expects a 200 response)
+    // Process webhook event
+    const event = await paystackService.handleWebhook(req.body, signature);
+    
+    if (event.event === 'charge.success') {
+      // Get order
+      const order = await Order.findOne({
+        where: { paymentReference: event.reference }
+      });
+      
+      if (order) {
+        // Update order status
+        await order.update({ status: 'processing' });
+      }
+    }
+    
+    // Respond with 200 (Paystack expects this)
     res.status(200).send('OK');
   } catch (error) {
-    console.error('ITN handling error:', error);
+    console.error('Webhook handling error:', error);
     res.status(500).send('Server error');
   }
 };
@@ -105,10 +133,17 @@ exports.handleNotification = async (req, res) => {
  */
 exports.handleSuccess = async (req, res) => {
   try {
-    const { m_payment_id } = req.query;
+    const { reference } = req.query;
+    
+    if (!reference) {
+      return res.status(400).json({ error: 'Reference is required' });
+    }
     
     // Get the order
-    const order = await Order.findByPk(m_payment_id);
+    const order = await Order.findOne({
+      where: { paymentReference: reference }
+    });
+    
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
     }
@@ -119,34 +154,6 @@ exports.handleSuccess = async (req, res) => {
     });
   } catch (error) {
     console.error('Payment success handling error:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-};
-
-/**
- * Handle cancelled payment
- * @param {Object} req - Request object
- * @param {Object} res - Response object
- */
-exports.handleCancel = async (req, res) => {
-  try {
-    const { m_payment_id } = req.query;
-    
-    // Get the order
-    const order = await Order.findByPk(m_payment_id);
-    if (!order) {
-      return res.status(404).json({ error: 'Order not found' });
-    }
-    
-    // Update order status to cancelled
-    await order.update({ status: 'cancelled' });
-    
-    res.json({
-      success: true,
-      order
-    });
-  } catch (error) {
-    console.error('Payment cancel handling error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 };

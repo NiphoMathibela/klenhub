@@ -4,9 +4,9 @@ const axios = require('axios');
 
 // PayFast configuration
 const config = {
-  merchantId: process.env.PAYFAST_MERCHANT_ID || '',
-  merchantKey: process.env.PAYFAST_MERCHANT_KEY || '',
-  passPhrase: process.env.PAYFAST_PASSPHRASE || '',
+  merchantId: process.env.PAYFAST_MERCHANT_ID || '10037456',
+  merchantKey: process.env.PAYFAST_MERCHANT_KEY || 'x0g1buvlee044',
+  passPhrase: process.env.PAYFAST_PASSPHRASE || 'testingthegateway',
   testMode: process.env.NODE_ENV !== 'production',
   returnUrl: process.env.PAYFAST_RETURN_URL || 'http://localhost:5173/payment/success',
   cancelUrl: process.env.PAYFAST_CANCEL_URL || 'http://localhost:5173/payment/cancel',
@@ -103,14 +103,14 @@ const generateSignature = (data) => {
   let signatureString = '';
   keys.forEach(key => {
     if (signatureData[key] !== '') {
-      signatureString += `${key}=${encodeURIComponent(signatureData[key]).replace(/%20/g, '+')}&`;
+      signatureString += `${key}=${encodeURIComponent(signatureData[key])}&`;
     }
   });
   
   // Remove the trailing & and add the passphrase if it exists
   signatureString = signatureString.slice(0, -1);
   if (config.passPhrase) {
-    signatureString += `&passphrase=${encodeURIComponent(config.passPhrase).replace(/%20/g, '+')}`;
+    signatureString += `&passphrase=${encodeURIComponent(config.passPhrase)}`;
   }
   
   console.log('Signature string:', signatureString);
@@ -142,7 +142,7 @@ const createPayment = (order, user) => {
   let queryString = '';
   Object.keys(paymentData).forEach(key => {
     if (paymentData[key] !== '') {
-      queryString += `${key}=${encodeURIComponent(paymentData[key]).replace(/%20/g, '+')}&`;
+      queryString += `${key}=${encodeURIComponent(paymentData[key])}&`;
     }
   });
   

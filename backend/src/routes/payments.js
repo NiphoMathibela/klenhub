@@ -4,7 +4,7 @@ const { body } = require('express-validator');
 const paymentsController = require('../controllers/payments');
 const { protect } = require('../middleware/auth');
 
-// Create a payment for an order
+// Initialize a Paystack payment for an order
 router.post(
   '/create',
   protect,
@@ -14,13 +14,13 @@ router.post(
   paymentsController.createPayment
 );
 
-// Handle PayFast ITN (Instant Transaction Notification)
-router.post('/notify', paymentsController.handleNotification);
+// Verify Paystack payment
+router.get('/verify', protect, paymentsController.verifyPayment);
+
+// Handle Paystack webhook
+router.post('/webhook', paymentsController.handleWebhook);
 
 // Handle successful payment return
 router.get('/success', protect, paymentsController.handleSuccess);
-
-// Handle cancelled payment
-router.get('/cancel', protect, paymentsController.handleCancel);
 
 module.exports = router;
