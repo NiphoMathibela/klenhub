@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { orderService } from '../services/api';
@@ -180,24 +180,28 @@ export const OrderHistory = () => {
                           <div key={item.id} className="flex items-center space-x-4">
                             <div className="h-20 w-16 bg-gray-50 flex-shrink-0">
                               <img
-                                src={item.Product.images.find(img => img.isMain)?.imageUrl || item.Product.images[0]?.imageUrl}
-                                alt={item.Product.name}
+                                src={
+                                  item.Product?.images?.length 
+                                    ? (item.Product.images.find(img => img.isMain)?.imageUrl || item.Product.images[0]?.imageUrl)
+                                    : '/placeholder-image.jpg'
+                                }
+                                alt={item.Product?.name || 'Product'}
                                 className="h-full w-full object-cover object-center"
                               />
                             </div>
                             <div>
                               <Link 
-                                to={`/product/${item.Product.id}`}
+                                to={`/product/${item.Product?.id || '#'}`}
                                 className="text-sm tracking-[0.05em] hover:text-gray-600 transition-colors"
                               >
-                                {item.Product.name}
+                                {item.Product?.name || 'Product'}
                               </Link>
                               <div className="text-xs text-gray-500 mt-1">
                                 <span>Size: {item.size}</span>
                                 <span className="mx-2">·</span>
                                 <span>Qty: {item.quantity}</span>
                                 <span className="mx-2">·</span>
-                                <span>R{parseFloat(item.price.toString()).toFixed(2)}</span>
+                                <span>R{parseFloat(item.price?.toString() || '0').toFixed(2)}</span>
                               </div>
                             </div>
                           </div>
@@ -249,15 +253,28 @@ export const OrderHistory = () => {
                         {order.trackingNumber ? (
                           <div className="text-sm">
                             <p><span className="font-medium">Tracking Number:</span> {order.trackingNumber}</p>
-                            {/* Add tracking link if available */}
+                            <p className="mt-2">
+                              You can track your package using the tracking number above on the courier's website.
+                            </p>
                           </div>
                         ) : (
                           <p className="text-sm text-gray-500">
-                            Tracking information will be available once your order ships.
+                            Tracking information will be available once your order has been shipped.
                           </p>
                         )}
                       </div>
                     )}
+                    
+                    {/* View Details Button */}
+                    <div className="flex justify-center pt-4">
+                      <Link 
+                        to={`/order/${order.id}`}
+                        className="px-6 py-3 bg-black text-white tracking-[0.1em] hover:bg-gray-900 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        VIEW FULL DETAILS
+                      </Link>
+                    </div>
                   </div>
                 )}
               </div>

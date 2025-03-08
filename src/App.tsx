@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
@@ -17,6 +16,7 @@ import { CategoryPage } from './pages/CategoryPage';
 import { Cart } from './pages/Cart';
 import { Checkout } from './pages/Checkout';
 import { OrderHistory } from './pages/OrderHistory';
+import OrderDetails from './pages/OrderDetails';
 import { PaymentSuccess } from './pages/PaymentSuccess';
 import { PaymentCancel } from './pages/PaymentCancel';
 import Contact from './pages/Contact';
@@ -86,6 +86,14 @@ const App = () => {
                 element={
                   <ProtectedRoute>
                     <OrderHistory />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="order/:id" 
+                element={
+                  <ProtectedRoute>
+                    <OrderDetails />
                   </ProtectedRoute>
                 } 
               />
