@@ -34,19 +34,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, change, icon, isLoadi
     <div className="mt-4 flex items-center">
       {isLoading ? (
         <div className="h-4 w-16 bg-gray-200 animate-pulse rounded"></div>
-      ) : (
-        <>
-          {change >= 0 ? (
-            <ArrowUp className="h-4 w-4 text-green-500 mr-1" />
-          ) : (
-            <ArrowDown className="h-4 w-4 text-red-500 mr-1" />
-          )}
-          <span className={`text-sm ${change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-            {Math.abs(change)}%
-          </span>
-          <span className="text-sm text-gray-500 ml-2">vs last month</span>
-        </>
-      )}
+      ) : "" }
     </div>
   </motion.div>
 );
@@ -134,9 +122,9 @@ export const Dashboard = () => {
     <div className="p-4 md:p-6 lg:p-8 space-y-8">
       <div className="flex justify-between items-center">
         <h1 className="text-xl md:text-2xl font-light tracking-[0.2em]">DASHBOARD</h1>
-        <button className="px-4 py-2 bg-black text-white text-sm tracking-[0.1em] hover:bg-gray-900 transition-colors">
+        {/* <button className="px-4 py-2 bg-black text-white text-sm tracking-[0.1em] hover:bg-gray-900 transition-colors">
           DOWNLOAD REPORT
-        </button>
+        </button> */}
       </div>
 
       {error && (
