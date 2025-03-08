@@ -95,7 +95,43 @@ const verifyTransaction = async (reference) => {
   try {
     console.log(`Verifying Paystack transaction: ${reference}`);
     
-    const response = await axios.get(`${config.baseUrl}/transaction/verify/${reference}`, {
+    // Check if the reference is in the format order_<uuid>_<timestamp>
+    // If not, try to find the order with this reference as the orderId
+    let paystackReference = reference;
+    
+    // If it's a UUID, it might be the orderId part of the reference
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidPattern.test(reference)) {
+      // This is likely just the order ID, not the full Paystack reference
+      console.log(`Reference appears to be a UUID: ${reference}. Checking for full reference in database.`);
+      
+      // Try to find the order with this ID to get the full payment reference
+      const { Order } = require('../models/Order');
+      const order = await Order.findByPk(reference);
+      
+      if (order && order.paymentReference) {
+        paystackReference = order.paymentReference;
+        console.log(`Found order with payment reference: ${paystackReference}`);
+      } else {
+        // If we can't find the order or it doesn't have a payment reference,
+        // we'll try with the original reference and let Paystack handle the error
+        console.log(`Could not find order with ID: ${reference} or it has no payment reference`);
+      }
+    } else if (reference.startsWith('order_')) {
+      // This is already in the correct format
+      paystackReference = reference;
+    } else if (reference.includes('_')) {
+      // This might be a partial reference, try to extract parts
+      const parts = reference.split('_');
+      if (parts.length >= 2 && uuidPattern.test(parts[1])) {
+        // This looks like it contains a UUID as the second part
+        paystackReference = reference;
+      }
+    }
+    
+    console.log(`Using Paystack reference for verification: ${paystackReference}`);
+    
+    const response = await axios.get(`${config.baseUrl}/transaction/verify/${encodeURIComponent(paystackReference)}`, {
       headers: {
         Authorization: `Bearer ${config.secretKey}`
       }

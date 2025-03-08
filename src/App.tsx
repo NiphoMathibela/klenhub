@@ -22,6 +22,7 @@ import { PaymentCancel } from './pages/PaymentCancel';
 import Contact from './pages/Contact';
 import SizeGuide from './pages/SizeGuide';
 import AdminLayout from './components/AdminLayout';
+import PaymentVerify from './pages/PaymentVerify';
 
 const App = () => {
   return (
@@ -68,6 +69,7 @@ const App = () => {
               {/* Payment routes */}
               <Route path="payment/success" element={<PaymentSuccess />} />
               <Route path="payment/cancel" element={<PaymentCancel />} />
+              <Route path="payment/verify" element={<PaymentVerify />} />
               
               {/* Protected customer routes */}
               <Route path="cart" element={<Cart />} />

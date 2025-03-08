@@ -200,9 +200,45 @@ export const paymentService = {
     return response.data;
   },
   
-  // Get payment status
-  getPaymentStatus: async (orderId: string) => {
-    const response = await api.get(`/payments/status/${orderId}`);
-    return response.data;
-  }
+  /**
+   * Verify payment after checkout
+   * @param reference Payment reference
+   * @returns Payment verification result
+   */
+  verifyPayment: async (reference: string) => {
+    try {
+      console.log(`Calling payment verification with reference: ${reference}`);
+      const response = await api.get(`/payments/verify?reference=${reference}`);
+      return response.data;
+    } catch (error) {
+      console.error('Payment verification error:', error);
+      // Return a well-formed error that won't break the UI
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Payment verification failed',
+        order: null // This ensures we know there's no order data
+      };
+    }
+  },
+
+  /**
+   * Get payment status
+   * @param reference Payment reference
+   * @returns Payment status
+   */
+  getPaymentStatus: async (reference: string) => {
+    try {
+      console.log(`Getting payment status for reference: ${reference}`);
+      const response = await api.get(`/payments/verify?reference=${reference}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting payment status:', error);
+      // Return a well-formed error that won't break the UI
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to get payment status',
+        order: null // This ensures we know there's no order data
+      };
+    }
+  },
 };

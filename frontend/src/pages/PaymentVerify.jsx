@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { verifyPayment } from '../utils/paystack';
 
 /**
@@ -9,6 +9,7 @@ import { verifyPayment } from '../utils/paystack';
 const PaymentVerify = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [status, setStatus] = useState('verifying');
   const [orderDetails, setOrderDetails] = useState(null);
   const [error, setError] = useState(null);
@@ -26,12 +27,21 @@ const PaymentVerify = () => {
       try {
         setStatus('verifying');
         
+        // Extract the actual order reference from the trxref parameter if available
+        const params = new URLSearchParams(location.search);
+        const trxref = params.get('trxref') || reference;
+        
         // Verify the payment
-        const result = await verifyPayment(reference);
+        const result = await verifyPayment(trxref);
         
         if (result.success) {
           setStatus('success');
           setOrderDetails(result.order);
+          
+          // Redirect to the success page with the reference
+          setTimeout(() => {
+            navigate(`/payment/success?reference=${trxref}`);
+          }, 1500);
         } else {
           setStatus('error');
           setError('Payment verification failed');
@@ -44,7 +54,7 @@ const PaymentVerify = () => {
     };
 
     verify();
-  }, [reference]);
+  }, [reference, navigate, location.search]);
 
   const handleContinueShopping = () => {
     navigate('/');
