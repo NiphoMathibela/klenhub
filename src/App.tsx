@@ -4,6 +4,7 @@ import { Footer } from './components/Footer';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import { Toaster } from 'react-hot-toast';
 import { Home } from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -29,6 +30,13 @@ const App = () => {
     <AuthProvider>
       <CartProvider>
         <Router>
+          <Toaster position="top-right" toastOptions={{
+            duration: 3000,
+            style: {
+              background: '#333',
+              color: '#fff',
+            },
+          }} />
           <Routes>
             {/* Admin routes */}
             <Route
@@ -41,6 +49,7 @@ const App = () => {
             >
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="orders" element={<Orders />} />
+              <Route path="orders/:id" element={<OrderDetails />} />
               <Route path="products" element={<Products />} />
             </Route>
 
