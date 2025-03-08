@@ -158,8 +158,14 @@ const processImage = async (image) => {
         return '/uploads/products/placeholder.jpg';
       }
       
+      // If the URL is an external URL, store it directly
+      if (image.url.startsWith('http://') || image.url.startsWith('https://')) {
+        console.log('Using external URL directly:', image.url);
+        return image.url; // Return the URL as is, without downloading
+      }
+      
       try {
-        // Download the image from the URL
+        // Download the image from the URL (for non-http/https URLs or backward compatibility)
         const result = await downloadImage(image.url);
         console.log('Image downloaded successfully:', result);
         return result;
