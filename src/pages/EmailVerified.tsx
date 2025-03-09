@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 const EmailVerified: React.FC = () => {
   return (
-    <div className="max-w-md mx-auto my-10 p-6 bg-white rounded-lg shadow-md text-center">
+    <div className="max-w-md mx-auto mt-60 p-6 bg-white rounded-lg shadow-md text-center">
       <div className="mb-6 text-green-500">
         <svg 
           xmlns="http://www.w3.org/2000/svg" 

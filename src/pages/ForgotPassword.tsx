@@ -27,7 +27,7 @@ const ForgotPassword: React.FC = () => {
 
   return (
     <div className="max-w-md mx-auto my-10 p-6 bg-white rounded-lg shadow-md">
-      <h1 className="text-2xl font-bold text-center mb-6">Reset Your Password</h1>
+      <h1 className="text-2xl font-bold text-center mt-36 mb-6">Reset Your Password</h1>
       
       {message && (
         <div className="mb-4 p-3 bg-green-100 text-green-700 rounded">
@@ -51,7 +51,7 @@ const ForgotPassword: React.FC = () => {
             id="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-indigo-500"
+            className="w-full px-4 py-2 border border-gray-300 focus:outline-none focus:ring focus:ring-black"
             required
           />
         </div>
@@ -59,14 +59,14 @@ const ForgotPassword: React.FC = () => {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full bg-indigo-600 text-white py-2 px-4 rounded hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 disabled:opacity-50"
+          className="w-full py-4 bg-black text-white text-sm tracking-[0.2em] hover:bg-gray-900 transition-colors"
         >
           {isSubmitting ? 'Sending...' : 'Send Reset Link'}
         </button>
       </form>
       
       <div className="mt-4 text-center">
-        <Link to="/login" className="text-indigo-600 hover:text-indigo-800">
+        <Link to="/login" className="text-sm text-gray-600 hover:text-black">
           Back to Login
         </Link>
       </div>

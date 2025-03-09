@@ -21,6 +21,22 @@ const createTransporter = async () => {
         pass: testAccount.pass
       }
     });
+  } else if (process.env.EMAIL_SERVICE === 'smtp') {
+    // Use custom SMTP configuration
+    console.log('Using custom SMTP configuration for email');
+    return nodemailer.createTransport({
+      host: process.env.EMAIL_HOST,
+      port: parseInt(process.env.EMAIL_PORT),
+      secure: process.env.EMAIL_SECURE === 'true',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD
+      },
+      tls: {
+        // Do not fail on invalid certificates
+        rejectUnauthorized: false
+      }
+    });
   } else {
     // Use the configured email service
     return nodemailer.createTransport({

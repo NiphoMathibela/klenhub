@@ -47,7 +47,7 @@ const ResetPassword: React.FC = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto my-10 p-6 bg-white rounded-lg shadow-md">
+    <div className="max-w-md mx-auto mt-60 p-6 bg-white rounded-lg shadow-md">
       <h1 className="text-2xl font-bold text-center mb-6">Reset Your Password</h1>
       
       {error && (

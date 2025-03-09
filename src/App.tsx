@@ -8,6 +8,9 @@ import { Toaster } from 'react-hot-toast';
 import { Home } from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import EmailVerified from './pages/EmailVerified';
 import { Dashboard } from './pages/admin/Dashboard';
 import { Orders } from './pages/admin/Orders';
 import { Products } from './pages/admin/Products';
@@ -69,6 +72,9 @@ const App = () => {
               <Route index element={<Home />} />
               <Route path="login" element={<Login />} />
               <Route path="register" element={<Register />} />
+              <Route path="forgot-password" element={<ForgotPassword />} />
+              <Route path="reset-password/:token" element={<ResetPassword />} />
+              <Route path="email-verified" element={<EmailVerified />} />
               <Route path="shipping" element={<ShippingInfo />} />
               <Route path="product/:id" element={<ProductDetail />} />
               <Route path="category/:category" element={<CategoryPage />} />
