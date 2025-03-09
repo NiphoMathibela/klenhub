@@ -5,7 +5,7 @@ const ShippingInfo: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
       <div className="text-center mb-12">
-        <h1 className="text-3xl font-light tracking-[0.2em] mb-4">SHIPPING INFORMATION</h1>
+        <h1 className="text-3xl font-light tracking-[0.2em] mt-28 mb-4">SHIPPING INFORMATION</h1>
         <p className="text-gray-600 max-w-2xl mx-auto">
           At KlenHub, we strive to deliver your orders as quickly and efficiently as possible. 
           Below you'll find all the information you need about our shipping policies and delivery times.

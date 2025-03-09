@@ -37,7 +37,7 @@ const Contact: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
       <div className="text-center mb-12">
-        <h1 className="text-3xl font-light tracking-[0.2em] mb-4">CONTACT US</h1>
+        <h1 className="text-3xl font-light tracking-[0.2em] mt-28 mb-4">CONTACT US</h1>
         <p className="text-gray-600 max-w-2xl mx-auto">
           We're here to help! Whether you have questions about our products, your order, or anything else, 
           our team is ready to assist you.
@@ -123,7 +123,7 @@ const Contact: React.FC = () => {
                     value={formData.name}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
                   />
                 </div>
                 
@@ -138,7 +138,7 @@ const Contact: React.FC = () => {
                     value={formData.email}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
                   />
                 </div>
               </div>
@@ -154,7 +154,7 @@ const Contact: React.FC = () => {
                   value={formData.subject}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
                 />
               </div>
               
@@ -169,7 +169,7 @@ const Contact: React.FC = () => {
                   onChange={handleChange}
                   required
                   rows={6}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
                 ></textarea>
               </div>
               
@@ -177,7 +177,7 @@ const Contact: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-900 transition-colors flex items-center justify-center disabled:bg-gray-400"
+                  className="px-6 py-3 bg-black text-white hover:bg-gray-900 transition-colors flex items-center justify-center disabled:bg-gray-400"
                 >
                   {isSubmitting ? (
                     <>
@@ -200,7 +200,7 @@ const Contact: React.FC = () => {
       {/* Map */}
       <div className="mt-12">
         <h2 className="text-xl font-medium mb-6">Find Us</h2>
-        <div className="h-96 bg-gray-200 rounded-lg overflow-hidden">
+        <div className="h-96 bg-gray-200 overflow-hidden">
           <iframe 
             src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3582.6881082211366!2d28.04684911502013!3d-26.105766983486!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1e950c68f0406a51%3A0x238ac9d9b1d34041!2sSandton%20City!5e0!3m2!1sen!2sza!4v1646827095118!5m2!1sen!2sza" 
             width="100%" 

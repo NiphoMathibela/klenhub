@@ -27,6 +27,8 @@ import Contact from './pages/Contact';
 import SizeGuide from './pages/SizeGuide';
 import AdminLayout from './components/AdminLayout';
 import PaymentVerify from './pages/PaymentVerify';
+import ReturnsExchanges from './pages/ReturnsExchanges';
+import FAQ from './pages/FAQ';
 
 const App = () => {
   return (
@@ -80,6 +82,8 @@ const App = () => {
               <Route path="category/:category" element={<CategoryPage />} />
               <Route path="contact" element={<Contact />} />
               <Route path="size-guide" element={<SizeGuide />} />
+              <Route path="returns-exchanges" element={<ReturnsExchanges />} />
+              <Route path="faq" element={<FAQ />} />
               
               {/* Payment routes */}
               <Route path="payment/success" element={<PaymentSuccess />} />

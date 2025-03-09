@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Instagram, Facebook, Twitter, Mail, MapPin, Phone, Clock, CreditCard, GoalIcon as PaypalIcon, AppleIcon, CircleIcon as GooglePayIcon, ShieldCheck, Truck, RefreshCcw, HeadphonesIcon } from 'lucide-react';
+import { Instagram, Facebook, Twitter, Mail, MapPin, Phone, Clock, ShieldCheck, Truck, RefreshCcw, HeadphonesIcon } from 'lucide-react';
 
 
 export const Footer = () => {
@@ -49,7 +49,7 @@ const handleNewsletterSubmit = (e: React.FormEvent) => {
             <ul className="space-y-3">
               <li><Link to="/contact" className="text-gray-600 hover:text-gray-900 transition-colors">Contact Us</Link></li>
               <li><Link to="/shipping" className="text-gray-600 hover:text-gray-900 transition-colors">Shipping Information</Link></li>
-              <li><Link to="/returns" className="text-gray-600 hover:text-gray-900 transition-colors">Returns & Exchanges</Link></li>
+              <li><Link to="/returns-exchanges" className="text-gray-600 hover:text-gray-900 transition-colors">Returns & Exchanges</Link></li>
               <li><Link to="/size-guide" className="text-gray-600 hover:text-gray-900 transition-colors">Size Guide</Link></li>
               <li><Link to="/faq" className="text-gray-600 hover:text-gray-900 transition-colors">FAQ</Link></li>
             </ul>
