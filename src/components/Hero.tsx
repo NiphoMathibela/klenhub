@@ -6,27 +6,27 @@ import { Link } from 'react-router-dom';
 const slides = [
   {
     image: '/klenhero.jpg',
-    title: 'Spring/Summer 2024 Campaign',
-    subtitle: 'Apr. 15 2024',
-    link: '/category/spring-summer'
+    title: 'Discover Your Signature Look.',
+    subtitle: 'Crafted for effortless style, daily.',
+    link: '/category/all'
   },
   {
     image: '/klenhero1.jpg',
-    title: 'Fall/Winter 2024 Editorial',
-    subtitle: 'Apr. 10 2024',
-    link: '/category/fall-winter'
+    title: 'The Art of Detail.',
+    subtitle: 'Uncover meticulously crafted designs.',
+    link: '/category/all'
   },
   {
     image: '/klenhero2.jpg',
-    title: 'KLEN_HUB New York City Flagship',
-    subtitle: 'Mar. 28 2024',
-    link: '/stores/new-york'
+    title: 'Elevate Your Everyday.',
+    subtitle: 'Pieces that inspire confidence.',
+    link: '/category/all'
   },
   {
     image: '/klenhero3.jpg',
-    title: 'Exclusive Collection Jersey',
-    subtitle: 'Mar. 25 2024',
-    link: '/collections/exclusive'
+    title: 'Where Fashion Meets Experience.',
+    subtitle: 'Explore our world, in store or online.',
+    link: '/category/all'
   }
 ];
 
@@ -117,7 +117,7 @@ export const Hero = () => {
                   to={slides[currentSlide].link}
                   className="inline-block px-8 py-3 border border-white text-white hover:bg-white hover:text-black transition-colors duration-300"
                 >
-                  View Collection
+                  Shop Now
                 </Link>
               </motion.div>
             </div>
