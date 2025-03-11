@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { orderService } from '../services/api';
-import { useAuth } from '../context/AuthContext';
 
 interface OrderItem {
   id: string;
@@ -24,7 +23,6 @@ interface Order {
 }
 
 const UserOrders: React.FC = () => {
-  const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -33,10 +31,13 @@ const UserOrders: React.FC = () => {
     const fetchOrders = async () => {
       try {
         const data = await orderService.getUserOrders();
-        setOrders(data);
+        // Ensure we're setting an array even if the API returns null or undefined
+        setOrders(Array.isArray(data) ? data : []);
       } catch (err: any) {
         setError(err.response?.data?.error || 'Failed to load orders');
         console.error('Error fetching orders:', err);
+        // Set orders to empty array on error to prevent rendering issues
+        setOrders([]);
       } finally {
         setLoading(false);
       }

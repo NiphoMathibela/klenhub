@@ -47,10 +47,13 @@ export const OrderHistory = () => {
       try {
         setLoading(true);
         const data = await orderService.getUserOrders();
-        setOrders(data);
+        // Ensure we're setting an array even if the API returns null or undefined
+        setOrders(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('Error fetching orders:', err);
         setError('Failed to load your orders. Please try again later.');
+        // Set orders to empty array on error to prevent rendering issues
+        setOrders([]);
       } finally {
         setLoading(false);
       }
