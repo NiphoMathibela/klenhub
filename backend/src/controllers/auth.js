@@ -37,7 +37,7 @@ exports.register = async (req, res) => {
     const verificationToken = await createToken(user.id, 'email_verification', 48);
     
     // Send verification email
-    const verificationUrl = `${req.protocol}://${req.get('host')}/api/auth/verify-email/${verificationToken.token}`;
+    const verificationUrl = `https://klenhub.co.za/api/auth/verify-email/${verificationToken.token}`;
     
     await sendEmail({
       to: user.email,
@@ -144,7 +144,7 @@ exports.verifyEmail = async (req, res) => {
     await deleteToken(tokenRecord.id);
     
     // Redirect to frontend verification success page
-    res.redirect(`${req.protocol}://${req.get('host').replace('3000', '5173')}/email-verified`);
+    res.redirect('https://klenhub.co.za/email-verified');
   } catch (error) {
     console.error('Email verification error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -227,7 +227,7 @@ exports.resendVerificationEmail = async (req, res) => {
     const verificationToken = await createToken(user.id, 'email_verification', 48);
     
     // Send verification email
-    const verificationUrl = `${req.protocol}://${req.get('host')}/api/auth/verify-email/${verificationToken.token}`;
+    const verificationUrl = `https://klenhub.co.za/api/auth/verify-email/${verificationToken.token}`;
     
     await sendEmail({
       to: user.email,

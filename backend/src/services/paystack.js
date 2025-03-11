@@ -5,7 +5,7 @@ const config = {
   publicKey: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_bd30029577544b48776ebb77fc4e9a356c630e50',
   secretKey: process.env.PAYSTACK_SECRET_KEY || '', // You'll need to set this in your .env file
   baseUrl: 'https://api.paystack.co',
-  callbackUrl: process.env.PAYSTACK_CALLBACK_URL || 'https://klenhub.co.za/payment/verify',
+  callbackUrl: 'https://klenhub.co.za/payment/verify', // Always use the production domain
 };
 
 /**
@@ -40,7 +40,7 @@ const initializeTransaction = async (order, user) => {
       amount,
       email: user.email,
       reference: `order_${order.id}_${Date.now()}`,
-      callback_url: `${config.callbackUrl}?reference=${order.id}`,
+      callback_url: `https://klenhub.co.za/payment/verify?reference=${encodeURIComponent(order.id)}`,
       metadata: {
         order_id: order.id,
         custom_fields: [

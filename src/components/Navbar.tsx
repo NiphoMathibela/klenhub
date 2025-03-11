@@ -134,15 +134,15 @@ export const Navbar = () => {
           <div className="flex-1 flex justify-end items-center space-x-3 md:space-x-6">
             <motion.div whileHover={{ scale: 1.1 }} className="flex items-center">
               {isAuthenticated ? (
-                <div className="hidden md:flex items-center space-x-2 md:space-x-4">
+                <div className="flex items-center space-x-2 md:space-x-4">
                   {isAdmin && (
                     <Link to="/admin/dashboard" className="hover:text-gray-600" onClick={handleNavigation}>
-                      <User className="h-5 w-5 md:h-5 md:w-5" />
+                      <User className="h-5 w-5" />
                     </Link>
                   )}
                   {!isAdmin && (
                     <Link to="/orders" className="hover:text-gray-600" onClick={handleNavigation}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 md:w-6 md:h-6">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
                         <rect width="16" height="20" x="4" y="2" rx="2" />
                         <path d="M8 6h8" />
                         <path d="M8 10h8" />
@@ -151,12 +151,12 @@ export const Navbar = () => {
                     </Link>
                   )}
                   <button onClick={handleLogout} className="hover:text-gray-600">
-                    <LogOut className="h-5 w-5 md:h-5 md:w-5" />
+                    <LogOut className="h-5 w-5" />
                   </button>
                 </div>
               ) : (
                 <Link to="/login" className="p-1 md:p-2 relative hover:text-gray-600 transition-colors" onClick={handleNavigation}>
-                  <User className="h-5 w-5 md:h-5 md:w-5" />
+                  <User className="h-5 w-5" />
                 </Link>
               )}
             </motion.div>
