@@ -64,7 +64,7 @@ const App = () => {
               element={
                 <>
                   <Navbar />
-                  <main className="min-h-screen">
+                  <main className="min-h-screen pt-16 lg:pt-[120px]">
                     <Outlet />
                   </main>
                   <Footer />
