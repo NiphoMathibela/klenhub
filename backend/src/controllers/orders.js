@@ -57,7 +57,8 @@ exports.createOrder = async (req, res) => {
         price: product.price
       });
 
-      await product.update({ stock: product.stock - item.quantity });
+      // Stock will be reduced after payment confirmation
+      // await product.update({ stock: product.stock - item.quantity });
     }
 
     const completeOrder = await Order.findByPk(order.id, {

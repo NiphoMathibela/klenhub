@@ -32,7 +32,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </h3>
         <p className="text-sm text-gray-500">{product.category}</p>
         <p className="text-sm font-medium text-gray-900">
-          ${product.price.toFixed(2)}
+          R{product.price.toFixed(2)}
         </p>
       </div>
     </Link>

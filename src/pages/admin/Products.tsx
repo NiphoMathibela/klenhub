@@ -167,14 +167,14 @@ export const Products = () => {
                 <td className="px-6 py-4 whitespace-nowrap">
                   <img
                     src={product.images.find(img => img.isMain)?.url || product.images[0]?.url}
-                    alt={product.name}
+                    // alt={product.name}
                     className="h-10 w-10 object-cover rounded"
                   />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">{product.name}</td>
                 <td className="px-6 py-4 whitespace-nowrap">{product.category}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  ${product.price.toFixed(2)}
+                  R{product.price.toFixed(2)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex flex-wrap gap-2">

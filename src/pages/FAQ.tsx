@@ -16,7 +16,7 @@ const FAQ: React.FC = () => {
     },
     {
       question: "What payment methods do you accept?",
-      answer: "We accept credit/debit cards (Visa, Mastercard), PayFast, and bank transfers. All transactions are secure and encrypted for your safety."
+      answer: "We accept credit/debit cards (Visa, Mastercard), Paystack, and bank transfers. All transactions are secure and encrypted for your safety."
     },
     {
       question: "How do I track my order?",

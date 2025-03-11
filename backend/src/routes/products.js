@@ -22,6 +22,7 @@ router.get('/:id', getProduct);
 // Admin only routes
 router.post('/', protect, admin, createProduct);
 router.put('/:id', protect, admin, updateProduct);
+router.patch('/:id', protect, admin, updateProduct);
 router.delete('/:id', protect, admin, deleteProduct);
 
 // Product image upload route

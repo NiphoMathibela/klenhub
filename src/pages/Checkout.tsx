@@ -81,11 +81,19 @@ export const Checkout = () => {
 
       const order = await orderService.createOrder(orderData);
 
-      // 2. Create PayFast payment
-      const payment = await paymentService.createPayment(order.id);
-
-      // 3. Redirect to PayFast
-      window.location.href = payment.redirectUrl;
+      // 2. Create payment and get redirect URL
+      if (order && order.id) {
+        const payment = await paymentService.createPayment(order.id);
+        
+        // 3. Redirect to payment gateway
+        if (payment && payment.redirectUrl) {
+          window.location.href = payment.redirectUrl;
+        } else {
+          throw new Error('Failed to get payment redirect URL');
+        }
+      } else {
+        throw new Error('Failed to create order');
+      }
     } catch (err) {
       console.error('Checkout error:', err);
       setError('Failed to process checkout. Please try again.');

@@ -52,11 +52,14 @@ export const Orders = () => {
     try {
       setLoading(true);
       const data = await orderService.getOrders();
-      setOrders(data);
+      // Ensure orders is always an array
+      setOrders(Array.isArray(data) ? data : []);
       setError(null);
     } catch (err) {
       console.error('Error fetching orders:', err);
       setError('Failed to load orders. Please try again later.');
+      // Initialize with empty array on error
+      setOrders([]);
     } finally {
       setLoading(false);
     }
@@ -106,7 +109,7 @@ export const Orders = () => {
         order.id,
         order.recipientName,
         order.email || 'N/A',
-        order.OrderItems.length,
+        Array.isArray(order.OrderItems) ? order.OrderItems.length : 0,
         order.total,
         order.status,
         formatDate(order.createdAt)
@@ -230,8 +233,10 @@ export const Orders = () => {
                         <div className="text-xs text-gray-500">{order.email || 'N/A'}</div>
                       </div>
                     </td>
-                    <td className="py-4 px-4 text-sm">{order.OrderItems.length} items</td>
-                    <td className="py-4 px-4 text-sm">${Number(order.total).toFixed(2)}</td>
+                    <td className="py-4 px-4 text-sm">
+                      {Array.isArray(order.OrderItems) ? `${order.OrderItems.length} items` : '0 items'}
+                    </td>
+                    <td className="py-4 px-4 text-sm">R{Number(order.total).toFixed(2)}</td>
                     <td className="py-4 px-4">
                       <div className="flex items-center space-x-2">
                         <span className={`px-2 py-1 text-xs tracking-[0.1em] rounded ${getStatusColor(order.status)}`}>

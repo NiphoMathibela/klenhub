@@ -2,12 +2,17 @@ import axios from 'axios';
 
 // Determine API URL based on environment
 const getApiUrl = () => {
-  return window.location.hostname === 'localhost' 
-    ? 'http://api.klenhub.co.za/api'
-    : '/api';
+  // Check if we're in production or development
+  if (window.location.hostname === 'localhost') {
+    return 'http://localhost:5000/api'; // Local development
+  } else {
+    // For production, use the full URL to avoid CORS and routing issues
+    return 'http://api.klenhub.co.za/api';
+  }
 };
 
 const API_URL = getApiUrl();
+console.log('Using API URL:', API_URL);
 
 // Create axios instance with default config
 const api = axios.create({
@@ -21,11 +26,14 @@ const api = axios.create({
 api.interceptors.response.use(
   (response) => {
     // Check if response is HTML instead of JSON (common SPA routing issue)
-    // Skip this check for auth endpoints and order endpoints as they might return different content types
+    // Skip this check for auth endpoints, order endpoints, product endpoints, and payment endpoints
+    // as they might return different content types
     const skipHtmlCheck = response.config.url && (
       response.config.url.includes('/auth/') || 
       response.config.url.includes('/orders') ||
-      response.config.url.includes('/payments')
+      response.config.url.includes('/payments') ||
+      response.config.url.includes('/products') ||
+      response.config.url.includes('/admin')
     );
     
     if (!skipHtmlCheck) {
@@ -210,7 +218,26 @@ export const productService = {
   // Get all products
   getProducts: async () => {
     try {
-      const response = await api.get('/products');
+      // For direct API access in production, use the full URL
+      let url = '/products';
+      let response;
+      
+      // Special handling for production environment
+      if (window.location.hostname !== 'localhost') {
+        try {
+          response = await axios.get('http://api.klenhub.co.za/api/products', {
+            headers: { 
+              'Authorization': `Bearer ${localStorage.getItem('token')}` 
+            }
+          });
+        } catch (directApiError) {
+          console.warn('Direct API call failed, falling back to relative URL:', directApiError);
+          response = await api.get(url);
+        }
+      } else {
+        response = await api.get(url);
+      }
+      
       return response.data;
     } catch (error) {
       console.error('Get products error:', error);
@@ -221,7 +248,6 @@ export const productService = {
   getProduct: async (id: string) => {
     try {
       // For direct API access in development, use the full URL
-      // This helps avoid CORS and routing issues
       let url = `/products/${id}`;
       
       // Special handling for production environment
@@ -237,10 +263,12 @@ export const productService = {
       }
       
       const response = await api.get(url);
-      return response.data;
+      // Ensure we return valid data, even if the API returns null or undefined
+      return response.data || {};
     } catch (error) {
       console.error(`Get product ${id} error:`, error);
-      throw error;
+      // Return empty object on error to prevent property access errors
+      return {};
     }
   },
   // Get products by category
@@ -297,8 +325,59 @@ export const productService = {
         }))
       };
       
-      const response = await api.put(`/products/${id}`, cleanedData);
-      return response.data;
+      // First try with Fetch API using PUT method
+      try {
+        const token = localStorage.getItem('token');
+        const baseUrl = window.location.hostname !== 'localhost' 
+          ? 'http://api.klenhub.co.za/api' 
+          : API_URL;
+        
+        const response = await fetch(`${baseUrl}/products/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(cleanedData)
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        
+        return await response.json();
+      } catch (fetchError) {
+        console.warn('PUT method failed, trying with PATCH:', fetchError);
+        
+        // Try with PATCH as fallback
+        try {
+          const token = localStorage.getItem('token');
+          const baseUrl = window.location.hostname !== 'localhost' 
+            ? 'http://api.klenhub.co.za/api' 
+            : API_URL;
+          
+          const response = await fetch(`${baseUrl}/products/${id}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(cleanedData)
+          });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          
+          return await response.json();
+        } catch (patchError) {
+          console.warn('PATCH method failed, falling back to axios:', patchError);
+          
+          // Fall back to axios as last resort
+          const response = await api.put(`/products/${id}`, cleanedData);
+          return response.data;
+        }
+      }
     } catch (error) {
       console.error(`Update product ${id} error:`, error);
       throw error;
@@ -365,6 +444,14 @@ export const orderService = {
     deliveryInstructions?: string;
   }) => {
     try {
+      // Get the authentication token
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        console.error('Authentication token not found');
+        throw new Error('You must be logged in to create an order');
+      }
+      
       // For direct API access in development, use the full URL
       // This helps avoid CORS and routing issues
       let url = '/orders';
@@ -372,18 +459,38 @@ export const orderService = {
       
       // Special handling for production environment
       if (window.location.hostname !== 'localhost') {
-        // Try to use a direct API call to the backend server
+        // Try to use a direct API call to the backend server with Fetch API first
         try {
-          response = await axios.post('http://api.klenhub.co.za/api/orders', orderData, {
-            headers: { 
+          const fetchResponse = await fetch('http://api.klenhub.co.za/api/orders', {
+            method: 'POST',
+            headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}` 
-            }
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(orderData)
           });
-        } catch (directApiError) {
-          console.warn('Direct API call failed, falling back to relative URL:', directApiError);
-          // Fall back to relative URL if direct call fails
-          response = await api.post(url, orderData);
+          
+          if (!fetchResponse.ok) {
+            throw new Error(`HTTP error! Status: ${fetchResponse.status}`);
+          }
+          
+          response = { data: await fetchResponse.json() };
+        } catch (fetchError) {
+          console.warn('Fetch API call failed, trying axios:', fetchError);
+          
+          // Try with axios as fallback
+          try {
+            response = await axios.post('http://api.klenhub.co.za/api/orders', orderData, {
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` 
+              }
+            });
+          } catch (directApiError) {
+            console.warn('Direct API call failed, falling back to relative URL:', directApiError);
+            // Fall back to relative URL if direct call fails
+            response = await api.post(url, orderData);
+          }
         }
       } else {
         response = await api.post(url, orderData);
@@ -392,18 +499,54 @@ export const orderService = {
       return response.data;
     } catch (error) {
       console.error('Create order error:', error);
-      throw error;
+      throw new Error('Failed to create order');
     }
   },
   
   // Get all orders (admin only)
   getOrders: async () => {
     try {
-      const response = await api.get('/orders');
-      return response.data;
+      // For direct API access in production, use the full URL
+      let url = '/orders/admin';
+      let response;
+      
+      // Special handling for production environment
+      if (window.location.hostname !== 'localhost') {
+        try {
+          // Use the correct admin orders endpoint
+          response = await axios.get('http://api.klenhub.co.za/api/orders/admin', {
+            headers: { 
+              'Authorization': `Bearer ${localStorage.getItem('token')}` 
+            }
+          });
+        } catch (directApiError) {
+          console.warn('Direct API call failed, falling back to relative URL:', directApiError);
+          
+          // Fall back to relative URL if direct call fails
+          try {
+            response = await api.get(url);
+          } catch (relativeUrlError) {
+            console.warn('Relative URL failed, trying user orders as fallback:', relativeUrlError);
+            
+            // As a last resort, try to get user orders
+            response = await api.get('/orders/my-orders');
+          }
+        }
+      } else {
+        try {
+          response = await api.get(url);
+        } catch (error) {
+          console.warn('Local API call failed, trying user orders as fallback:', error);
+          response = await api.get('/orders/my-orders');
+        }
+      }
+      
+      // Ensure we always return an array, even if the API returns null or undefined
+      return Array.isArray(response.data) ? response.data : [];
     } catch (error) {
       console.error('Get orders error:', error);
-      throw error;
+      // Return empty array on error to prevent filter errors
+      return [];
     }
   },
   
@@ -411,13 +554,13 @@ export const orderService = {
   getUserOrders: async () => {
     try {
       // For direct API access in development, use the full URL
-      let url = '/orders/user';
+      let url = '/orders/my-orders';
       let response;
       
       // Special handling for production environment
       if (window.location.hostname !== 'localhost') {
         try {
-          response = await axios.get('http://api.klenhub.co.za/api/orders/user', {
+          response = await axios.get('http://api.klenhub.co.za/api/orders/my-orders', {
             headers: { 
               'Authorization': `Bearer ${localStorage.getItem('token')}` 
             }
@@ -430,10 +573,12 @@ export const orderService = {
         response = await api.get(url);
       }
       
-      return response.data;
+      // Ensure we always return an array, even if the API returns null or undefined
+      return Array.isArray(response.data) ? response.data : [];
     } catch (error) {
       console.error('Get user orders error:', error);
-      throw error;
+      // Return empty array on error to prevent filter errors
+      return [];
     }
   },
   
@@ -460,17 +605,65 @@ export const orderService = {
         response = await api.get(url);
       }
       
-      return response.data;
+      // Ensure we return valid data, even if the API returns null or undefined
+      return response.data || {};
     } catch (error) {
       console.error(`Get order ${id} error:`, error);
-      throw error;
+      // Return empty object on error to prevent property access errors
+      return {};
     }
   },
   
   // Update order status (admin only)
   updateOrderStatus: async (id: string, status: string) => {
     try {
-      const response = await api.patch(`/orders/${id}/status`, { status });
+      let response;
+      
+      // In production, use the API directly
+      if (window.location.hostname !== 'localhost') {
+        try {
+          // For the live API, use a direct fetch call with PATCH method
+          const token = localStorage.getItem('token');
+          const fetchResponse = await fetch(`http://api.klenhub.co.za/api/orders/${id}/status`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ status })
+          });
+          
+          if (!fetchResponse.ok) {
+            throw new Error(`HTTP error! Status: ${fetchResponse.status}`);
+          }
+          
+          response = { data: await fetchResponse.json() };
+        } catch (fetchError) {
+          console.warn('Fetch API call failed, trying axios with PUT:', fetchError);
+          
+          try {
+            // Try PUT method as a fallback
+            response = await axios({
+              method: 'put',
+              url: `http://api.klenhub.co.za/api/orders/${id}/status`,
+              data: { status },
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}` 
+              }
+            });
+          } catch (putError) {
+            console.warn('PUT method failed, trying with relative URL:', putError);
+            
+            // Fall back to the relative URL with the api instance
+            response = await api.patch(`/orders/${id}/status`, { status });
+          }
+        }
+      } else {
+        // In development, use the relative URL
+        response = await api.patch(`/orders/${id}/status`, { status });
+      }
+      
       return response.data;
     } catch (error) {
       console.error(`Update order ${id} status error:`, error);
@@ -495,7 +688,7 @@ export const adminService = {
   // Get all orders (admin only)
   getAllOrders: async () => {
     try {
-      // For direct API access in development, use the full URL
+      // For direct API access in production, use the full URL
       let url = '/admin/orders';
       let response;
       
@@ -619,19 +812,18 @@ export const adminService = {
 
 // Payment Services
 export const paymentService = {
-  // Create a PayFast payment for an order
+  // Create a payment for an order
   createPayment: async (orderId: string) => {
     try {
       // For direct API access in development, use the full URL
-      // This helps avoid CORS and routing issues
-      let url = `/payments/payfast/${orderId}`;
+      let url = `/payments/create`;
       let response;
       
       // Special handling for production environment
       if (window.location.hostname !== 'localhost') {
         // Try to use a direct API call to the backend server
         try {
-          response = await axios.post(`http://api.klenhub.co.za/api/payments/payfast/${orderId}`, {}, {
+          response = await axios.post(`http://api.klenhub.co.za/api/payments/create`, { orderId }, {
             headers: { 
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${localStorage.getItem('token')}` 
@@ -640,10 +832,10 @@ export const paymentService = {
         } catch (directApiError) {
           console.warn('Direct API call failed, falling back to relative URL:', directApiError);
           // Fall back to relative URL if direct call fails
-          response = await api.post(url);
+          response = await api.post(url, { orderId });
         }
       } else {
-        response = await api.post(url);
+        response = await api.post(url, { orderId });
       }
       
       return response.data;
@@ -661,13 +853,13 @@ export const paymentService = {
   verifyPayment: async (reference: string) => {
     try {
       // For direct API access in development, use the full URL
-      let url = `/payments/verify/${reference}`;
+      let url = `/payments/verify?reference=${reference}`;
       let response;
       
       // Special handling for production environment
       if (window.location.hostname !== 'localhost') {
         try {
-          response = await axios.get(`http://api.klenhub.co.za/api/payments/verify/${reference}`, {
+          response = await axios.get(`http://api.klenhub.co.za/api/payments/verify?reference=${reference}`, {
             headers: { 
               'Authorization': `Bearer ${localStorage.getItem('token')}` 
             }
@@ -701,13 +893,13 @@ export const paymentService = {
   getPaymentStatus: async (reference: string) => {
     try {
       // For direct API access in development, use the full URL
-      let url = `/payments/status/${reference}`;
+      let url = `/payments/status?reference=${reference}`;
       let response;
       
       // Special handling for production environment
       if (window.location.hostname !== 'localhost') {
         try {
-          response = await axios.get(`http://api.klenhub.co.za/api/payments/status/${reference}`, {
+          response = await axios.get(`http://api.klenhub.co.za/api/payments/status?reference=${reference}`, {
             headers: { 
               'Authorization': `Bearer ${localStorage.getItem('token')}` 
             }
@@ -729,6 +921,46 @@ export const paymentService = {
       return {
         success: false,
         error: 'Failed to get payment status'
+      };
+    }
+  },
+  
+  /**
+   * Handle payment callback
+   * @param reference Payment reference
+   * @returns Callback handling result
+   */
+  handlePaymentCallback: async (reference: string) => {
+    try {
+      // For direct API access in development, use the full URL
+      let url = `/payments/success?reference=${reference}`;
+      let response;
+      
+      // Special handling for production environment
+      if (window.location.hostname !== 'localhost') {
+        try {
+          response = await axios.get(`http://api.klenhub.co.za/api/payments/success?reference=${reference}`, {
+            headers: { 
+              'Authorization': `Bearer ${localStorage.getItem('token')}` 
+            }
+          });
+        } catch (directApiError) {
+          console.warn('Direct API call failed, falling back to relative URL:', directApiError);
+          response = await api.get(url);
+        }
+      } else {
+        response = await api.get(url);
+      }
+      
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Failed to handle payment callback:', error);
+      return {
+        success: false,
+        error: 'Failed to handle payment callback'
       };
     }
   }

@@ -137,6 +137,22 @@ exports.verifyPayment = async (req, res) => {
       if (verification.status === 'success') {
         await order.update({ status: 'processing' });
         console.log(`Order ${order.id} updated to status: processing`);
+        
+        // Reduce stock for each item in the order after payment confirmation
+        if (order.OrderItems && order.OrderItems.length > 0) {
+          console.log(`Reducing stock for ${order.OrderItems.length} items in order ${order.id}`);
+          
+          for (const item of order.OrderItems) {
+            if (item.Product) {
+              const product = item.Product;
+              const newStock = Math.max(0, product.stock - item.quantity);
+              await product.update({ stock: newStock });
+              console.log(`Reduced stock for product ${product.id} from ${product.stock} to ${newStock}`);
+            } else {
+              console.warn(`Product not found for OrderItem ${item.id}`);
+            }
+          }
+        }
       }
     } catch (verifyError) {
       // Log the verification error but continue processing
@@ -169,14 +185,36 @@ exports.handleWebhook = async (req, res) => {
     const event = await paystackService.handleWebhook(req.body, signature);
     
     if (event.event === 'charge.success') {
-      // Get order
+      // Get order with items and products
       const order = await Order.findOne({
-        where: { paymentReference: event.reference }
+        where: { paymentReference: event.reference },
+        include: [{ 
+          model: OrderItem,
+          include: [Product]
+        }]
       });
       
       if (order) {
+        console.log(`Webhook: Payment confirmed for order ${order.id}`);
+        
         // Update order status
         await order.update({ status: 'processing' });
+        
+        // Reduce stock for each item in the order
+        if (order.OrderItems && order.OrderItems.length > 0) {
+          console.log(`Webhook: Reducing stock for ${order.OrderItems.length} items in order ${order.id}`);
+          
+          for (const item of order.OrderItems) {
+            if (item.Product) {
+              const product = item.Product;
+              const newStock = Math.max(0, product.stock - item.quantity);
+              await product.update({ stock: newStock });
+              console.log(`Webhook: Reduced stock for product ${product.id} from ${product.stock} to ${newStock}`);
+            } else {
+              console.warn(`Webhook: Product not found for OrderItem ${item.id}`);
+            }
+          }
+        }
       }
     }
     
