@@ -3,7 +3,7 @@
  */
 
 // API URL - using environment variable with fallback
-export const API_URL = import.meta.env.VITE_API_URL || 'http://api.klenhub.co.za/api';
+export const API_URL = import.meta.env.VITE_API_URL || 'https://api.klenhub.co.za/api';
 
 // Image placeholder URL
 export const PLACEHOLDER_IMAGE_URL = '/placeholder-image.jpg';

@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const sequelize = require('./config/database');
 require('dotenv').config();
 
@@ -35,6 +36,51 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3000;
+let server;
+
+// Path to store the server process ID
+const PID_FILE_PATH = path.join(__dirname, '..', 'server.pid');
+
+// Graceful shutdown function
+const gracefulShutdown = () => {
+  console.log('Received shutdown signal. Closing server gracefully...');
+  
+  // Close the HTTP server
+  if (server) {
+    server.close(() => {
+      console.log('HTTP server closed.');
+      
+      // Close database connection
+      sequelize.close().then(() => {
+        console.log('Database connection closed.');
+        
+        // Remove PID file
+        if (fs.existsSync(PID_FILE_PATH)) {
+          fs.unlinkSync(PID_FILE_PATH);
+          console.log('PID file removed.');
+        }
+        
+        console.log('Server shutdown complete.');
+        process.exit(0);
+      }).catch(err => {
+        console.error('Error closing database connection:', err);
+        process.exit(1);
+      });
+    });
+    
+    // Force shutdown after timeout if server doesn't close gracefully
+    setTimeout(() => {
+      console.error('Could not close connections in time, forcefully shutting down');
+      process.exit(1);
+    }, 10000);
+  } else {
+    process.exit(0);
+  }
+};
+
+// Register shutdown handlers
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
 
 // Sync database and start server
 const start = async () => {
@@ -57,8 +103,13 @@ const start = async () => {
       console.log('Admin user created');
     }
     
-    app.listen(PORT, () => {
+    // Start the server and save the server instance
+    server = app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
+      
+      // Save the process ID to a file for the shutdown script
+      fs.writeFileSync(PID_FILE_PATH, process.pid.toString());
+      console.log(`Server PID ${process.pid} saved to ${PID_FILE_PATH}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
