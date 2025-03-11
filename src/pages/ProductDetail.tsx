@@ -1,24 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { Product as ProductType } from '../types';
+import { productService } from '../services/api';
 
 interface ProductImage {
-  id: string;
+  id: string | number;
   imageUrl: string;
   isMain: boolean;
 }
 
 // Local interface to match the API response
 interface ProductResponse {
-  id: string;
+  id: string | number;
   name: string;
   price: number;
   description: string;
-  sizes: string[];
+  sizes: string[] | Array<{ id: number; size: string; quantity: number }>;
   images: ProductImage[];
   category: string;
 }
@@ -37,12 +37,29 @@ export const ProductDetail = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await axios.get<ProductResponse>(`http://api.klenhub.co.za/api/products/${id}`);
-        setProduct(response.data);
         
-        // Set main image
-        const mainImg = response.data.images.find(img => img.isMain);
-        setMainImage(mainImg ? mainImg.imageUrl : response.data.images[0]?.imageUrl || null);
+        // Use the productService instead of direct axios call
+        // This ensures consistent URL handling across the app
+        const productData = await productService.getProduct(id || '');
+        console.log('API Response:', productData);
+        
+        // Validate the response data
+        if (!productData || typeof productData !== 'object') {
+          console.error('Invalid product data received:', productData);
+          throw new Error('Invalid product data received');
+        }
+        
+        setProduct(productData);
+        
+        // Ensure images array exists before trying to find the main image
+        if (productData.images && Array.isArray(productData.images) && productData.images.length > 0) {
+          // Set main image
+          const mainImg = productData.images.find((img: ProductImage) => img && img.isMain);
+          setMainImage(mainImg ? mainImg.imageUrl : productData.images[0]?.imageUrl || null);
+        } else {
+          console.warn('Product has no images or images is not an array:', productData);
+          setMainImage(null);
+        }
       } catch (err) {
         console.error('Error fetching product:', err);
         setError('Failed to load product. Please try again.');
@@ -68,35 +85,56 @@ export const ProductDetail = () => {
       return;
     }
     
-    // Convert the product to match the expected ProductType format
-    const productForCart: ProductType = {
-      id: Number(product.id),
-      name: product.name,
-      description: product.description,
-      price: product.price,
-      category: product.category,
-      images: product.images.map(img => ({
-        id: Number(img.id),
-        imageUrl: img.imageUrl,
-        isMain: img.isMain
-      })),
-      sizes: product.sizes.map((size, index) => ({
-        id: index,
-        size: size,
-        quantity: 10 // Default quantity, adjust as needed
-      }))
-    };
-    
-    dispatch({
-      type: 'ADD_TO_CART',
-      payload: {
-        product: productForCart,
-        size: selectedSize,
-        quantity: 1
-      }
-    });
-    
-    setError(null);
+    try {
+      // Convert the product to match the expected ProductType format
+      const productForCart: ProductType = {
+        id: typeof product.id === 'string' ? parseInt(product.id, 10) : Number(product.id) || 0,
+        name: product.name || '',
+        description: product.description || '',
+        price: product.price || 0,
+        category: product.category || '',
+        images: (product.images && Array.isArray(product.images)) 
+          ? product.images
+              .filter(img => img && img.imageUrl) // Filter out any undefined or invalid images
+              .map(img => ({
+                id: typeof img.id === 'string' ? parseInt(img.id, 10) : Number(img.id) || 0,
+                imageUrl: img.imageUrl || '',
+                isMain: Boolean(img.isMain)
+              }))
+          : [], // Provide empty array as fallback if images is undefined
+        sizes: (product.sizes && Array.isArray(product.sizes))
+          ? (typeof product.sizes[0] === 'string'
+              ? (product.sizes as string[]).map((size, index) => ({
+                  id: index,
+                  size: size || '',
+                  quantity: 10 // Default quantity
+                }))
+              : (product.sizes as Array<{ id: number; size: string; quantity: number }>)
+                  .filter(s => s && s.size) // Filter out any undefined or invalid sizes
+                  .map(s => ({
+                    id: s.id || 0,
+                    size: s.size || '',
+                    quantity: s.quantity || 10
+                  })))
+          : [] // Provide empty array as fallback if sizes is undefined
+      };
+      
+      console.log('Product for cart:', productForCart);
+      
+      dispatch({
+        type: 'ADD_TO_CART',
+        payload: {
+          product: productForCart,
+          size: selectedSize,
+          quantity: 1
+        }
+      });
+      
+      setError(null);
+    } catch (err) {
+      console.error('Error adding to cart:', err);
+      setError('Failed to add product to cart. Please try again.');
+    }
   };
 
   const handleImageClick = (imageUrl: string) => {
@@ -133,6 +171,15 @@ export const ProductDetail = () => {
     );
   }
 
+  // Ensure sizes is an array of strings for rendering
+  const productSizes = (product.sizes && Array.isArray(product.sizes))
+    ? (typeof product.sizes[0] === 'string'
+        ? product.sizes as string[]
+        : (product.sizes as Array<{ id: number; size: string; quantity: number }>)
+            .filter(s => s && s.size) // Filter out any undefined or invalid sizes
+            .map(s => s.size))
+    : [];
+
   return (
     <motion.div 
       className="min-h-screen pt-20 sm:pt-24 md:pt-32 pb-16 sm:pb-24"
@@ -156,32 +203,38 @@ export const ProductDetail = () => {
           <div className="space-y-4 sm:space-y-6">
             {/* Main Image */}
             <div className="aspect-[3/4] bg-gray-50">
-              {mainImage && (
+              {mainImage ? (
                 <img 
                   src={mainImage} 
                   alt={product.name} 
                   className="w-full h-full object-cover object-center"
                 />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                  No image available
+                </div>
               )}
             </div>
             
             {/* Thumbnail Images */}
-            {product.images.length > 1 && (
+            {product.images && Array.isArray(product.images) && product.images.length > 1 && (
               <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 sm:gap-4">
                 {product.images.map((image, index) => (
-                  <button 
-                    key={image.id || index}
-                    onClick={() => handleImageClick(image.imageUrl)}
-                    className={`aspect-square bg-gray-50 ${
-                      mainImage === image.imageUrl ? 'ring-2 ring-black' : ''
-                    }`}
-                  >
-                    <img 
-                      src={image.imageUrl} 
-                      alt={`${product.name} - View ${index + 1}`}
-                      className="w-full h-full object-cover object-center"
-                    />
-                  </button>
+                  image && image.imageUrl ? (
+                    <button 
+                      key={`${image.id || index}`}
+                      onClick={() => handleImageClick(image.imageUrl)}
+                      className={`aspect-square bg-gray-50 ${
+                        mainImage === image.imageUrl ? 'ring-2 ring-black' : ''
+                      }`}
+                    >
+                      <img 
+                        src={image.imageUrl} 
+                        alt={`${product.name} - View ${index + 1}`}
+                        className="w-full h-full object-cover object-center"
+                      />
+                    </button>
+                  ) : null
                 ))}
               </div>
             )}
@@ -191,31 +244,39 @@ export const ProductDetail = () => {
           <div className="space-y-4 sm:space-y-6 md:space-y-8">
             <div>
               <h1 className="text-xl sm:text-2xl md:text-3xl font-light mb-2 sm:mb-3">{product.name}</h1>
-              <p className="text-base sm:text-lg md:text-xl font-medium">R{product.price.toFixed(2)}</p>
+              <p className="text-base sm:text-lg md:text-xl font-medium">
+                R{(product.price || 0).toFixed(2)}
+              </p>
             </div>
             
             <div className="space-y-2 sm:space-y-3">
               <h3 className="text-sm sm:text-base font-medium">Description</h3>
-              <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">{product.description}</p>
+              <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
+                {product.description || 'No description available'}
+              </p>
             </div>
             
             <div className="space-y-2 sm:space-y-3">
               <h3 className="text-sm sm:text-base font-medium">Size</h3>
-              <div className="flex flex-wrap gap-2 sm:gap-3">
-                {product.sizes.map((size) => (
-                  <button
-                    key={size}
-                    onClick={() => handleSizeSelect(size)}
-                    className={`min-w-[40px] sm:min-w-[50px] h-8 sm:h-10 px-2 sm:px-3 text-xs sm:text-sm border ${
-                      selectedSize === size
-                        ? 'border-black bg-black text-white'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
+              {productSizes.length > 0 ? (
+                <div className="flex flex-wrap gap-2 sm:gap-3">
+                  {productSizes.map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => handleSizeSelect(size)}
+                      className={`min-w-[40px] sm:min-w-[50px] h-8 sm:h-10 px-2 sm:px-3 text-xs sm:text-sm border ${
+                        selectedSize === size
+                          ? 'border-black bg-black text-white'
+                          : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs sm:text-sm text-gray-600">No sizes available</p>
+              )}
               {error && (
                 <p className="text-red-500 text-xs sm:text-sm">{error}</p>
               )}
@@ -223,7 +284,12 @@ export const ProductDetail = () => {
             
             <button
               onClick={addToCart}
-              className="w-full py-3 sm:py-4 bg-black text-white flex items-center justify-center text-xs sm:text-sm tracking-[0.2em] hover:bg-gray-900 transition-colors"
+              disabled={productSizes.length === 0}
+              className={`w-full py-3 sm:py-4 ${
+                productSizes.length > 0 
+                  ? 'bg-black text-white hover:bg-gray-900' 
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              } flex items-center justify-center text-xs sm:text-sm tracking-[0.2em] transition-colors`}
             >
               <ShoppingBag className="mr-2 h-4 w-4" />
               ADD TO CART
@@ -232,7 +298,7 @@ export const ProductDetail = () => {
             <div className="space-y-2 sm:space-y-3 pt-4 sm:pt-6 border-t border-gray-200">
               <div className="flex text-xs sm:text-sm">
                 <span className="w-24 sm:w-32 text-gray-600">Category:</span>
-                <span>{product.category}</span>
+                <span>{product.category || 'Uncategorized'}</span>
               </div>
             </div>
           </div>

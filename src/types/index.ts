@@ -18,15 +18,17 @@ export interface CartItem {
 
 export interface CartState {
   items: CartItem[];
+  total: number;
 }
 
 export interface CartContextType {
   state: CartState;
   dispatch: React.Dispatch<CartAction>;
+  checkout: () => Promise<void>;
 }
 
 export type CartAction =
-  | { type: 'ADD_TO_CART'; payload: CartItem }
-  | { type: 'REMOVE_FROM_CART'; payload: string }
-  | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number } }
+  | { type: 'ADD_TO_CART'; payload: { product: Product; size: string; quantity: number } }
+  | { type: 'REMOVE_FROM_CART'; payload: { productId: number; size: string } }
+  | { type: 'UPDATE_QUANTITY'; payload: { productId: number; size: string; quantity: number } }
   | { type: 'CLEAR_CART' };

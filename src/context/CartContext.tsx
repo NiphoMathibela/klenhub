@@ -1,25 +1,14 @@
 import React, { createContext, useContext, useReducer } from 'react';
 import { orderService } from '../services/api';
-import { CartItem, Product } from '../types';
-
-interface CartState {
-  items: CartItem[];
-  total: number;
-}
-
-type CartAction =
-  | { type: 'ADD_TO_CART'; payload: { product: Product; size: string; quantity: number } }
-  | { type: 'REMOVE_FROM_CART'; payload: { productId: number; size: string } }
-  | { type: 'UPDATE_QUANTITY'; payload: { productId: number; size: string; quantity: number } }
-  | { type: 'CLEAR_CART' };
-
-interface CartContextType {
-  state: CartState;
-  dispatch: React.Dispatch<CartAction>;
-  checkout: () => Promise<void>;
-}
+import { CartItem, Product, CartState, CartAction, CartContextType } from '../types';
 
 const CartContext = createContext<CartContextType | null>(null);
+
+// Helper function to safely convert ID values to numbers
+const safeParseInt = (value: string | number): number => {
+  if (typeof value === 'number') return value;
+  return parseInt(value, 10) || 0; // Fallback to 0 if parsing fails
+};
 
 const cartReducer = (state: CartState, action: CartAction): CartState => {
   switch (action.type) {
@@ -113,9 +102,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       dispatch({ type: 'CLEAR_CART' });
       
+      // Redirect to success page or show success message
+      alert('Order placed successfully!');
     } catch (error) {
-      console.error('Checkout failed:', error);
-      throw error;
+      console.error('Error placing order:', error);
+      alert('Failed to place order. Please try again.');
     }
   };
 
@@ -126,7 +117,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-const useCartContext = () => {
+export const useCartContext = () => {
   const context = useContext(CartContext);
   if (!context) {
     throw new Error('useCart must be used within a CartProvider');
