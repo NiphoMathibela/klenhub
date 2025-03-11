@@ -8,9 +8,9 @@ interface CartState {
 }
 
 type CartAction =
-  | { type: 'ADD_TO_CART'; payload: { product: Product; size: string } }
-  | { type: 'REMOVE_FROM_CART'; payload: { productId: string; size: string } }
-  | { type: 'UPDATE_QUANTITY'; payload: { productId: string; size: string; quantity: number } }
+  | { type: 'ADD_TO_CART'; payload: { product: Product; size: string; quantity: number } }
+  | { type: 'REMOVE_FROM_CART'; payload: { productId: number; size: string } }
+  | { type: 'UPDATE_QUANTITY'; payload: { productId: number; size: string; quantity: number } }
   | { type: 'CLEAR_CART' };
 
 interface CartContextType {
@@ -30,7 +30,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
 
       if (existingItemIndex > -1) {
         const newItems = [...state.items];
-        newItems[existingItemIndex].quantity += 1;
+        newItems[existingItemIndex].quantity += action.payload.quantity || 1;
         return {
           ...state,
           items: newItems,
@@ -38,7 +38,12 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         };
       }
 
-      const newItems = [...state.items, { product: action.payload.product, quantity: 1, size: action.payload.size }];
+      const newItems = [...state.items, { 
+        product: action.payload.product, 
+        quantity: action.payload.quantity || 1, 
+        size: action.payload.size 
+      }];
+      
       return {
         ...state,
         items: newItems,
@@ -80,8 +85,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
 
 const calculateTotal = (items: CartItem[]): number => {
   return items.reduce((total, item) => {
-    const price = item.product.salePrice || item.product.price;
-    return total + price * item.quantity;
+    return total + item.product.price * item.quantity;
   }, 0);
 };
 
@@ -92,17 +96,25 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const orderData = {
         items: state.items.map(item => ({
-          productId: item.product.id,
+          productId: String(item.product.id),
           quantity: item.quantity,
           size: item.size
         })),
-        total: state.total
+        total: state.total,
+        recipientName: "User Name",
+        phoneNumber: "1234567890",
+        addressLine1: "123 Main St",
+        city: "City",
+        province: "Province",
+        postalCode: "12345"
       };
 
       await orderService.createOrder(orderData);
+      
       dispatch({ type: 'CLEAR_CART' });
+      
     } catch (error) {
-      console.error('Checkout error:', error);
+      console.error('Checkout failed:', error);
       throw error;
     }
   };
@@ -114,12 +126,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-function useCartContext() {
+const useCartContext = () => {
   const context = useContext(CartContext);
   if (!context) {
     throw new Error('useCart must be used within a CartProvider');
   }
   return context;
-}
+};
 
 export { useCartContext as useCart };

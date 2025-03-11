@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3000/api';
+const API_URL = 'http://api.klenhub.co.za/api';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -136,7 +136,7 @@ export const searchService = {
         params: { query }
       });
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error searching products:', error);
       throw error;
     }
@@ -210,7 +210,7 @@ export const paymentService = {
       console.log(`Calling payment verification with reference: ${reference}`);
       const response = await api.get(`/payments/verify?reference=${reference}`);
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Payment verification error:', error);
       // Return a well-formed error that won't break the UI
       return {
@@ -231,7 +231,7 @@ export const paymentService = {
       console.log(`Getting payment status for reference: ${reference}`);
       const response = await api.get(`/payments/verify?reference=${reference}`);
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting payment status:', error);
       // Return a well-formed error that won't break the UI
       return {

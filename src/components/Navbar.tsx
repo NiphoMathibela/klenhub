@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingBag, Search, Menu, X, User, LogOut } from 'lucide-react';
 import { useCart } from '../context/CartContext';
@@ -21,9 +21,26 @@ export const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<ProductSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const { state } = useCart();
   const { isAuthenticated, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
+
+  // Check if the screen is mobile size
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    // Initial check
+    checkIfMobile();
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', checkIfMobile);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
 
   const categories = [
     { name: 'ALL', path: '/category/all' },
@@ -78,6 +95,12 @@ export const Navbar = () => {
     }
   };
 
+  // Close mobile menu when navigating
+  const handleNavigation = () => {
+    setIsMenuOpen(false);
+    setIsSearchOpen(false);
+  };
+
   return (
     <motion.nav 
       initial={{ opacity: 0, y: -20 }}
@@ -86,20 +109,21 @@ export const Navbar = () => {
     >
       <div className="max-w-[1800px] mx-auto">
         {/* Top Bar - Search and Cart */}
-        <div className="flex justify-between items-center h-12 px-6 lg:px-12 border-b border-gray-200">
-          <div className="flex-1">
+        <div className="flex justify-between items-center h-16 px-4 md:px-6 lg:px-12 border-b border-gray-200">
+          <div className="flex-1 flex items-center">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="lg:hidden p-2 hover:opacity-70 transition-opacity"
+              aria-label="Toggle menu"
             >
               {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
           
           {/* Center Logo */}
-          <Link to="/" className="absolute left-1/2 -translate-x-1/2 top-3">
+          <Link to="/" className="flex-shrink-0 text-center mx-2" onClick={handleNavigation}>
             <motion.h1 
-              className="text-2xl tracking-[0.3em] font-light"
+              className="text-xl md:text-2xl tracking-[0.2em] md:tracking-[0.3em] font-light"
               whileHover={{ scale: 1.02 }}
               transition={{ duration: 0.2 }}
             >
@@ -107,18 +131,18 @@ export const Navbar = () => {
             </motion.h1>
           </Link>
 
-          <div className="flex-1 flex justify-end items-center space-x-6">
-            <motion.div whileHover={{ scale: 1.1 }}>
+          <div className="flex-1 flex justify-end items-center space-x-3 md:space-x-6">
+            <motion.div whileHover={{ scale: 1.1 }} className="flex items-center">
               {isAuthenticated ? (
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2 md:space-x-4">
                   {isAdmin && (
-                    <Link to="/admin/dashboard" className="hover:text-gray-600">
-                      <User className="w-6 h-6" />
+                    <Link to="/admin/dashboard" className="hover:text-gray-600" onClick={handleNavigation}>
+                      <User className="h-5 w-5 md:h-5 md:w-5" />
                     </Link>
                   )}
                   {!isAdmin && (
-                    <Link to="/orders" className="hover:text-gray-600">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+                    <Link to="/orders" className="hover:text-gray-600" onClick={handleNavigation}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 md:w-6 md:h-6">
                         <rect width="16" height="20" x="4" y="2" rx="2" />
                         <path d="M8 6h8" />
                         <path d="M8 10h8" />
@@ -127,25 +151,33 @@ export const Navbar = () => {
                     </Link>
                   )}
                   <button onClick={handleLogout} className="hover:text-gray-600">
-                    <LogOut className="w-6 h-6" />
+                    <LogOut className="h-5 w-5 md:h-5 md:w-5" />
                   </button>
                 </div>
               ) : (
-                <Link to="/login" className="p-2 relative hover:text-gray-600 transition-colors">
-                  <User className="h-4 w-4" />
+                <Link to="/login" className="p-1 md:p-2 relative hover:text-gray-600 transition-colors" onClick={handleNavigation}>
+                  <User className="h-5 w-5 md:h-5 md:w-5" />
                 </Link>
               )}
             </motion.div>
             <motion.button
               whileHover={{ scale: 1.1 }}
-              onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className="p-2 hover:text-gray-600 transition-colors"
+              onClick={() => {
+                setIsSearchOpen(!isSearchOpen);
+                if (isMenuOpen) setIsMenuOpen(false);
+              }}
+              className="p-1 md:p-2 hover:text-gray-600 transition-colors"
+              aria-label="Search"
             >
-              <Search className="h-4 w-4" />
+              <Search className="h-5 w-5 md:h-5 md:w-5" />
             </motion.button>
             <motion.div whileHover={{ scale: 1.1 }}>
-              <Link to="/cart" className="p-2 relative hover:text-gray-600 transition-colors">
-                <ShoppingBag className="h-4 w-4" />
+              <Link 
+                to="/cart" 
+                className="p-1 md:p-2 relative hover:text-gray-600 transition-colors"
+                onClick={handleNavigation}
+              >
+                <ShoppingBag className="h-5 w-5 md:h-5 md:w-5" />
                 {state.items.length > 0 && (
                   <span className="absolute -top-1 -right-1 bg-black text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">
                     {state.items.length}
@@ -158,7 +190,7 @@ export const Navbar = () => {
 
         {/* Categories Navigation */}
         <div className="hidden lg:block border-b border-gray-200">
-          <div className="flex justify-center items-center space-x-12 py-6 px-6 lg:px-12">
+          <div className="flex justify-center items-center space-x-6 md:space-x-12 py-4 md:py-6 px-4 md:px-6 lg:px-12 overflow-x-auto">
             {categories.map((category) => (
               <motion.div
                 key={category.path}
@@ -167,7 +199,8 @@ export const Navbar = () => {
               >
                 <Link
                   to={category.path}
-                  className="text-sm tracking-wider hover:text-gray-600 transition-colors relative group"
+                  className="text-sm tracking-wider hover:text-gray-600 transition-colors relative group whitespace-nowrap"
+                  onClick={handleNavigation}
                 >
                   {category.name}
                   <span className="absolute bottom-0 left-0 w-0 h-[1px] bg-black transition-all duration-300 group-hover:w-full" />
@@ -193,7 +226,7 @@ export const Navbar = () => {
                 <Link
                   to={category.path}
                   className="block text-sm tracking-wider"
-                  onClick={() => setIsMenuOpen(false)}
+                  onClick={handleNavigation}
                 >
                   {category.name}
                 </Link>
@@ -211,10 +244,14 @@ export const Navbar = () => {
             display: isSearchOpen ? 'block' : 'none'
           }}
           transition={{ duration: 0.2 }}
-          className="absolute left-0 right-0 bg-white border-t p-6"
+          className="absolute left-0 right-0 bg-white border-t p-4 md:p-6 z-50"
         >
           <div className='flex justify-end'>
-            <button onClick={() => setIsSearchOpen(false)} className="p-2 hover:text-gray-600">
+            <button 
+              onClick={() => setIsSearchOpen(false)} 
+              className="p-2 hover:text-gray-600"
+              aria-label="Close search"
+            >
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -231,7 +268,7 @@ export const Navbar = () => {
             <button 
               onClick={handleSearch}
               disabled={isSearching}
-              className={`absolute right-2 top-1/2 transform -translate-y-1/2 py-2 px-4 bg-black text-white transition ${
+              className={`absolute right-2 top-1/2 transform -translate-y-1/2 py-2 px-3 md:px-4 bg-black text-white text-sm md:text-base transition ${
                 isSearching ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-900'
               }`}
             >
@@ -246,7 +283,7 @@ export const Navbar = () => {
               animate={{ opacity: 1, y: 0 }}
               className="mt-4 max-h-96 overflow-y-auto"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {searchResults.map((product) => (
                   <motion.div
                     key={product.id}

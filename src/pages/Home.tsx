@@ -18,7 +18,7 @@ export const Home = () => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const response = await axios.get<Product[]>('http://localhost:3000/api/products');
+        const response = await axios.get<Product[]>('http://api.klenhub.co.za/api/products');
         setProducts(response.data);
         setError(null);
       } catch (err) {

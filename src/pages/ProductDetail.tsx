@@ -4,6 +4,7 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { ArrowLeft, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { Product as ProductType } from '../types';
 
 interface ProductImage {
   id: string;
@@ -11,7 +12,8 @@ interface ProductImage {
   isMain: boolean;
 }
 
-interface Product {
+// Local interface to match the API response
+interface ProductResponse {
   id: string;
   name: string;
   price: number;
@@ -23,7 +25,7 @@ interface Product {
 
 export const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const [product, setProduct] = useState<Product | null>(null);
+  const [product, setProduct] = useState<ProductResponse | null>(null);
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +37,7 @@ export const ProductDetail = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await axios.get<Product>(`http://localhost:3000/api/products/${id}`);
+        const response = await axios.get<ProductResponse>(`http://api.klenhub.co.za/api/products/${id}`);
         setProduct(response.data);
         
         // Set main image
@@ -66,12 +68,31 @@ export const ProductDetail = () => {
       return;
     }
     
+    // Convert the product to match the expected ProductType format
+    const productForCart: ProductType = {
+      id: Number(product.id),
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      category: product.category,
+      images: product.images.map(img => ({
+        id: Number(img.id),
+        imageUrl: img.imageUrl,
+        isMain: img.isMain
+      })),
+      sizes: product.sizes.map((size, index) => ({
+        id: index,
+        size: size,
+        quantity: 10 // Default quantity, adjust as needed
+      }))
+    };
+    
     dispatch({
       type: 'ADD_TO_CART',
       payload: {
-        product,
+        product: productForCart,
         size: selectedSize,
-        quantity: 1 // Adding quantity property to match CartContext expectations
+        quantity: 1
       }
     });
     

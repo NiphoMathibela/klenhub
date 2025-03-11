@@ -8,9 +8,9 @@ const config = {
   merchantKey: process.env.PAYFAST_MERCHANT_KEY || 'x0g1buvlee044',
   passPhrase: process.env.PAYFAST_PASSPHRASE || 'testingthegateway',
   testMode: process.env.NODE_ENV !== 'production',
-  returnUrl: process.env.PAYFAST_RETURN_URL || 'http://localhost:5173/payment/success',
-  cancelUrl: process.env.PAYFAST_CANCEL_URL || 'http://localhost:5173/payment/cancel',
-  notifyUrl: process.env.PAYFAST_NOTIFY_URL || 'http://localhost:3000/api/payments/notify',
+  returnUrl: process.env.PAYFAST_RETURN_URL || 'https://klenhub.co.za/payment/success',
+  cancelUrl: process.env.PAYFAST_CANCEL_URL || 'https://klenhub.co.za/payment/cancel',
+  notifyUrl: process.env.PAYFAST_NOTIFY_URL || 'http://api.klenhub.co.za/api/payments/notify',
   apiUrl: process.env.NODE_ENV === 'production' 
     ? 'https://www.payfast.co.za/eng/process' 
     : 'https://sandbox.payfast.co.za/eng/process'

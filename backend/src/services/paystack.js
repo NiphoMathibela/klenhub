@@ -5,7 +5,7 @@ const config = {
   publicKey: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_bd30029577544b48776ebb77fc4e9a356c630e50',
   secretKey: process.env.PAYSTACK_SECRET_KEY || '', // You'll need to set this in your .env file
   baseUrl: 'https://api.paystack.co',
-  callbackUrl: process.env.PAYSTACK_CALLBACK_URL || 'http://localhost:5173/payment/verify',
+  callbackUrl: process.env.PAYSTACK_CALLBACK_URL || 'https://klenhub.co.za/payment/verify',
 };
 
 /**
