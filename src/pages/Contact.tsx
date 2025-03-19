@@ -23,12 +23,27 @@ const Contact: React.FC = () => {
     setSubmitError('');
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setSubmitSuccess(true);
+      const response = await fetch('https://klenmail.onrender.com/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      const data = await response.json();
+      if (data.success) {
+        setSubmitSuccess(true);
+        setFormData({ name: '', email: '', subject: '', message: '' });
+      } else {
+        throw new Error(data.message || 'Submission failed');
+      }
       setFormData({ name: '', email: '', subject: '', message: '' });
     } catch (error) {
-      setSubmitError('There was an error sending your message. Please try again later.');
+      setSubmitError((error as Error).message || 'There was an error sending your message. Please try again later.');
     } finally {
       setIsSubmitting(false);
     }
