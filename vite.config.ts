@@ -10,8 +10,9 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://api.klenhub.co.za',
+        target: 'https://service.klenhub.co.za',
         changeOrigin: true,
+        secure: true,
       },
     },
   },

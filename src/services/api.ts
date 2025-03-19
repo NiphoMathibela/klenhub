@@ -7,7 +7,7 @@ const getApiUrl = () => {
     return 'http://localhost:5000/api'; // Local development
   } else {
     // For production, use the full URL with HTTPS to avoid mixed content issues
-    return 'https://api.klenhub.co.za/api';
+    return 'https://service.klenhub.co.za/api';
   }
 };
 
@@ -78,7 +78,7 @@ export const authService = {
       if (window.location.hostname !== 'localhost') {
         // Try to use a direct API call to the backend server
         try {
-          response = await axios.post('https://api.klenhub.co.za/api/auth/login', { email, password }, {
+          response = await axios.post('https://service.klenhub.co.za/api/auth/login', { email, password }, {
             headers: { 'Content-Type': 'application/json' }
           });
         } catch (directApiError) {
@@ -108,7 +108,7 @@ export const authService = {
       if (window.location.hostname !== 'localhost') {
         // Try to use a direct API call to the backend server
         try {
-          response = await axios.post('https://api.klenhub.co.za/api/auth/register', 
+          response = await axios.post('https://service.klenhub.co.za/api/auth/register', 
             { name, email, password }, 
             { headers: { 'Content-Type': 'application/json' } }
           );
@@ -136,7 +136,7 @@ export const authService = {
       // Special handling for production environment
       if (window.location.hostname !== 'localhost') {
         try {
-          response = await axios.get('https://api.klenhub.co.za/api/auth/me', {
+          response = await axios.get('https://service.klenhub.co.za/api/auth/me', {
             headers: { 
               'Authorization': `Bearer ${localStorage.getItem('token')}` 
             }
@@ -191,7 +191,7 @@ export const authService = {
       // Special handling for production environment
       if (window.location.hostname !== 'localhost') {
         try {
-          response = await axios.put('https://api.klenhub.co.za/api/auth/profile', userData, {
+          response = await axios.put('https://service.klenhub.co.za/api/auth/profile', userData, {
             headers: { 
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${localStorage.getItem('token')}` 
@@ -225,7 +225,7 @@ export const productService = {
       // Special handling for production environment
       if (window.location.hostname !== 'localhost') {
         try {
-          response = await axios.get('https://api.klenhub.co.za/api/products', {
+          response = await axios.get('https://service.klenhub.co.za/api/products', {
             headers: { 
               'Authorization': `Bearer ${localStorage.getItem('token')}` 
             }
@@ -254,7 +254,7 @@ export const productService = {
       if (window.location.hostname !== 'localhost') {
         // Try to use a direct API call to the backend server
         try {
-          const directApiResponse = await axios.get(`https://api.klenhub.co.za/api/products/${id}`);
+          const directApiResponse = await axios.get(`https://service.klenhub.co.za/api/products/${id}`);
           return directApiResponse.data;
         } catch (directApiError) {
           console.warn('Direct API call failed, falling back to relative URL:', directApiError);
@@ -329,7 +329,7 @@ export const productService = {
       try {
         const token = localStorage.getItem('token');
         const baseUrl = window.location.hostname !== 'localhost' 
-          ? 'https://api.klenhub.co.za/api' 
+          ? 'https://service.klenhub.co.za/api' 
           : API_URL;
         
         const response = await fetch(`${baseUrl}/products/${id}`, {
@@ -353,7 +353,7 @@ export const productService = {
         try {
           const token = localStorage.getItem('token');
           const baseUrl = window.location.hostname !== 'localhost' 
-            ? 'https://api.klenhub.co.za/api' 
+            ? 'https://service.klenhub.co.za/api' 
             : API_URL;
           
           const response = await fetch(`${baseUrl}/products/${id}`, {
@@ -461,7 +461,7 @@ export const orderService = {
       if (window.location.hostname !== 'localhost') {
         // Try to use a direct API call to the backend server with Fetch API first
         try {
-          const fetchResponse = await fetch('https://api.klenhub.co.za/api/orders', {
+          const fetchResponse = await fetch('https://service.klenhub.co.za/api/orders', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -480,7 +480,7 @@ export const orderService = {
           
           // Try with axios as fallback
           try {
-            response = await axios.post('https://api.klenhub.co.za/api/orders', orderData, {
+            response = await axios.post('https://service.klenhub.co.za/api/orders', orderData, {
               headers: { 
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}` 
@@ -514,7 +514,7 @@ export const orderService = {
       if (window.location.hostname !== 'localhost') {
         try {
           // Use the correct admin orders endpoint
-          response = await axios.get('https://api.klenhub.co.za/api/orders/admin', {
+          response = await axios.get('https://service.klenhub.co.za/api/orders/admin', {
             headers: { 
               'Authorization': `Bearer ${localStorage.getItem('token')}` 
             }
@@ -560,7 +560,7 @@ export const orderService = {
       // Special handling for production environment
       if (window.location.hostname !== 'localhost') {
         try {
-          response = await axios.get('https://api.klenhub.co.za/api/orders/my-orders', {
+          response = await axios.get('https://service.klenhub.co.za/api/orders/my-orders', {
             headers: { 
               'Authorization': `Bearer ${localStorage.getItem('token')}` 
             }
@@ -592,7 +592,7 @@ export const orderService = {
       // Special handling for production environment
       if (window.location.hostname !== 'localhost') {
         try {
-          response = await axios.get(`https://api.klenhub.co.za/api/orders/${id}`, {
+          response = await axios.get(`https://service.klenhub.co.za/api/orders/${id}`, {
             headers: { 
               'Authorization': `Bearer ${localStorage.getItem('token')}` 
             }
@@ -624,7 +624,7 @@ export const orderService = {
         try {
           // For the live API, use a direct fetch call with PATCH method
           const token = localStorage.getItem('token');
-          const fetchResponse = await fetch(`https://api.klenhub.co.za/api/orders/${id}/status`, {
+          const fetchResponse = await fetch(`https://service.klenhub.co.za/api/orders/${id}/status`, {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
@@ -645,7 +645,7 @@ export const orderService = {
             // Try PUT method as a fallback
             response = await axios({
               method: 'put',
-              url: `https://api.klenhub.co.za/api/orders/${id}/status`,
+              url: `https://service.klenhub.co.za/api/orders/${id}/status`,
               data: { status },
               headers: { 
                 'Content-Type': 'application/json',
@@ -695,7 +695,7 @@ export const adminService = {
       // Special handling for production environment
       if (window.location.hostname !== 'localhost') {
         try {
-          response = await axios.get('https://api.klenhub.co.za/api/admin/orders', {
+          response = await axios.get('https://service.klenhub.co.za/api/admin/orders', {
             headers: { 
               'Authorization': `Bearer ${localStorage.getItem('token')}` 
             }
@@ -725,7 +725,7 @@ export const adminService = {
       // Special handling for production environment
       if (window.location.hostname !== 'localhost') {
         try {
-          response = await axios.put(`https://api.klenhub.co.za/api/admin/orders/${id}/status`, 
+          response = await axios.put(`https://service.klenhub.co.za/api/admin/orders/${id}/status`, 
             { status }, 
             {
               headers: { 
@@ -759,7 +759,7 @@ export const adminService = {
       // Special handling for production environment
       if (window.location.hostname !== 'localhost') {
         try {
-          response = await axios.get('https://api.klenhub.co.za/api/admin/stats', {
+          response = await axios.get('https://service.klenhub.co.za/api/admin/stats', {
             headers: { 
               'Authorization': `Bearer ${localStorage.getItem('token')}` 
             }
@@ -789,7 +789,7 @@ export const adminService = {
       // Special handling for production environment
       if (window.location.hostname !== 'localhost') {
         try {
-          response = await axios.get('https://api.klenhub.co.za/api/admin/users', {
+          response = await axios.get('https://service.klenhub.co.za/api/admin/users', {
             headers: { 
               'Authorization': `Bearer ${localStorage.getItem('token')}` 
             }
@@ -823,7 +823,7 @@ export const paymentService = {
       if (window.location.hostname !== 'localhost') {
         // Try to use a direct API call to the backend server
         try {
-          response = await axios.post(`https://api.klenhub.co.za/api/payments/create`, { orderId }, {
+          response = await axios.post(`https://service.klenhub.co.za/api/payments/create`, { orderId }, {
             headers: { 
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${localStorage.getItem('token')}` 
@@ -859,7 +859,7 @@ export const paymentService = {
       // Special handling for production environment
       if (window.location.hostname !== 'localhost') {
         try {
-          response = await axios.get(`https://api.klenhub.co.za/api/payments/verify?reference=${reference}`, {
+          response = await axios.get(`https://service.klenhub.co.za/api/payments/verify?reference=${reference}`, {
             headers: { 
               'Authorization': `Bearer ${localStorage.getItem('token')}` 
             }
@@ -899,7 +899,7 @@ export const paymentService = {
       // Special handling for production environment
       if (window.location.hostname !== 'localhost') {
         try {
-          response = await axios.get(`https://api.klenhub.co.za/api/payments/status?reference=${reference}`, {
+          response = await axios.get(`https://service.klenhub.co.za/api/payments/status?reference=${reference}`, {
             headers: { 
               'Authorization': `Bearer ${localStorage.getItem('token')}` 
             }
@@ -939,7 +939,7 @@ export const paymentService = {
       // Special handling for production environment
       if (window.location.hostname !== 'localhost') {
         try {
-          response = await axios.get(`https://api.klenhub.co.za/api/payments/success?reference=${reference}`, {
+          response = await axios.get(`https://service.klenhub.co.za/api/payments/success?reference=${reference}`, {
             headers: { 
               'Authorization': `Bearer ${localStorage.getItem('token')}` 
             }

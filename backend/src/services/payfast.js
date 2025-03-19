@@ -10,7 +10,7 @@ const config = {
   testMode: process.env.NODE_ENV !== 'production',
   returnUrl: process.env.PAYFAST_RETURN_URL || 'https://klenhub.co.za/payment/success',
   cancelUrl: process.env.PAYFAST_CANCEL_URL || 'https://klenhub.co.za/payment/cancel',
-  notifyUrl: process.env.PAYFAST_NOTIFY_URL || 'http://api.klenhub.co.za/api/payments/notify',
+  notifyUrl: process.env.PAYFAST_NOTIFY_URL || 'https://service.klenhub.co.za/api/payments/notify',
   apiUrl: process.env.NODE_ENV === 'production' 
     ? 'https://www.payfast.co.za/eng/process' 
     : 'https://sandbox.payfast.co.za/eng/process'
