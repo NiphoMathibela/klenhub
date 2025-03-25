@@ -61,11 +61,11 @@ const handleNewsletterSubmit = (e: React.FormEvent) => {
             <ul className="space-y-3 sm:space-y-4">
               <li className="flex items-start space-x-2 sm:space-x-3">
                 <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 mt-1 flex-shrink-0" />
-                <span className="text-sm text-gray-600">259 Main Street, Maboneng, Johannesburg, 2094</span>
+                <span className="text-sm text-gray-600">21 Albercht Street, Maboneng, Johannesburg</span>
               </li>
               <li className="flex items-center space-x-2 sm:space-x-3">
                 <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 flex-shrink-0" />
-                <span className="text-sm text-gray-600">061 108 6069</span>
+                <span className="text-sm text-gray-600">061 732 5876</span>
               </li>
               <li className="flex items-center space-x-2 sm:space-x-3">
                 <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 flex-shrink-0" />
@@ -102,18 +102,18 @@ const handleNewsletterSubmit = (e: React.FormEvent) => {
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             {/* Social Links */}
             <div className="flex space-x-4 text-white">
-              <a href="https://instagram.com/klenhub" target="_blank" rel="noopener noreferrer" 
+              <a href="https://www.instagram.com/klen_hub/" target="_blank" rel="noopener noreferrer" 
                 className="text-gray-600 hover:text-gray-900 transition-colors">
                 <Instagram className="h-5 w-5 sm:h-6 sm:w-6" />
               </a>
-              <a href="https://facebook.com/klenhub" target="_blank" rel="noopener noreferrer"
+              {/* <a href="https://facebook.com/klenhub" target="_blank" rel="noopener noreferrer"
                 className="text-gray-600 hover:text-gray-900 transition-colors">
                 <Facebook className="h-5 w-5 sm:h-6 sm:w-6" />
               </a>
               <a href="https://twitter.com/klenhub" target="_blank" rel="noopener noreferrer"
                 className="text-gray-600 hover:text-gray-900 transition-colors">
                 <Twitter className="h-5 w-5 sm:h-6 sm:w-6" />
-              </a>
+              </a> */}
             </div>
           </div>
 

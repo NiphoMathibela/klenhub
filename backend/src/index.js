@@ -29,6 +29,12 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
+// Handle password reset redirects
+app.get('/reset-password/:token', (req, res) => {
+  const { token } = req.params;
+  res.redirect(`https://klenhub.co.za/reset-password/${token}`);
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -85,9 +91,10 @@ process.on('SIGINT', gracefulShutdown);
 // Sync database and start server
 const start = async () => {
   try {
-    // Force sync to update schema
-    await sequelize.sync({ alter: true });
-    console.log('Database connected and schema updated successfully');
+    // Only use force or alter in development, and only when needed
+    // For production, use regular sync without altering the schema
+    await sequelize.sync();
+    console.log('Database connected successfully');
     
     // Create admin user if it doesn't exist
     const User = require('./models/User');

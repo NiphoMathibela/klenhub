@@ -78,8 +78,8 @@ const Contact: React.FC = () => {
               <Phone className="h-6 w-6 text-gray-600 mt-1 mr-4" />
               <div>
                 <h3 className="font-medium">Phone</h3>
-                <p className="text-gray-600 mt-1">+27 11 123 4567</p>
-                <p className="text-gray-600">+27 82 987 6543 (WhatsApp)</p>
+                {/* <p className="text-gray-600 mt-1">+27 11 123 4567</p> */}
+                <p className="text-gray-600">+27 61 732 5876 (WhatsApp)</p>
               </div>
             </div>
             
@@ -88,7 +88,7 @@ const Contact: React.FC = () => {
               <div>
                 <h3 className="font-medium">Address</h3>
                 <p className="text-gray-600 mt-1">
-                  123 Fashion Street<br />
+                  21 Albrecht Street<br />
                   Sandton<br />
                   Johannesburg, 2196<br />
                   South Africa
@@ -217,7 +217,7 @@ const Contact: React.FC = () => {
         <h2 className="text-xl font-medium mb-6">Find Us</h2>
         <div className="h-96 bg-gray-200 overflow-hidden">
           <iframe 
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3582.6881082211366!2d28.04684911502013!3d-26.105766983486!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1e950c68f0406a51%3A0x238ac9d9b1d34041!2sSandton%20City!5e0!3m2!1sen!2sza!4v1646827095118!5m2!1sen!2sza" 
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d7159.5905615247375!2d28.054893066860263!3d-26.20333700946873!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1e950e86874f7ac3%3A0x3d6d5ef2e54f41cc!2s21%20Albrecht%20St%2C%20Maboneng%2C%20Johannesburg%2C%202094!5e0!3m2!1sen!2sza!4v1742385139819!5m2!1sen!2sza"
             width="100%" 
             height="100%" 
             style={{ border: 0 }} 

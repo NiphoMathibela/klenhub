@@ -154,17 +154,22 @@ exports.verifyEmail = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
+    console.log('Password reset requested for email:', email);
     
     const user = await User.findOne({ where: { email } });
     if (!user) {
+      console.log('Password reset failed: No user with email:', email);
       return res.status(404).json({ error: 'No user with that email' });
     }
     
     // Create password reset token
     const resetToken = await createToken(user.id, 'password_reset', 1); // 1 hour expiry
+    console.log('Password reset token created:', resetToken.token);
     
-    // Create reset URL
-    const resetUrl = `${req.protocol}://${req.get('host').replace('3000', '5173')}/reset-password/${resetToken.token}`;
+    // Always use the frontend domain for reset URL
+    const frontendDomain = 'klenhub.co.za';
+    const resetUrl = `https://${frontendDomain}/reset-password/${resetToken.token}`;
+    console.log('Password reset URL generated:', resetUrl);
     
     // Send email
     await sendEmail({
@@ -179,6 +184,7 @@ exports.forgotPassword = async (req, res) => {
       `
     });
     
+    console.log('Password reset email sent to:', user.email);
     res.status(200).json({ message: 'Password reset email sent' });
   } catch (error) {
     console.error('Forgot password error:', error);

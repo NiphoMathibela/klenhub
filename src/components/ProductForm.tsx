@@ -29,8 +29,9 @@ interface ProductFormProps {
   isLoading: boolean;
 }
 
-const AVAILABLE_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+const AVAILABLE_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']; 
 const CATEGORIES = ['SALE', 'NEW', 'TOPS', 'BOTTOMS', 'ACCESSORIES', 'SHOES'];
+const SHOE_SIZES: string[] = ['4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14'];
 
 export const ProductForm: React.FC<ProductFormProps> = ({
   initialData,
@@ -101,7 +102,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     setErrors(prev => ({ ...prev, [name]: '' }));
   };
 
-  const handleSizeChange = (size: string, quantity: number) => {
+  const handleSizeChange = (size: string, quantity: number): void => {
     setFormData(prev => {
       const existingSizeIndex = prev.sizes.findIndex(s => s.size === size);
       const newSizes = [...prev.sizes];
@@ -281,9 +282,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         const updatedImages = formData.images.map(image => {
           if (image.file) {
             // Find the corresponding uploaded file
-            const uploadedFile = uploadedImages.find(
-              uploaded => uploaded.filename === image.file?.name || 
-                         uploaded.mimetype === image.file?.type
+            const uploadedFile = uploadedImages.find((uploaded: { filename: string; mimetype: string; }) =>
+              uploaded.filename === image.file?.name || 
+              uploaded.mimetype === image.file?.type
             );
             
             if (uploadedFile) {
@@ -390,7 +391,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Sizes and Quantities</label>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {AVAILABLE_SIZES.map(size => (
+              {(formData.category === 'shoes' ? SHOE_SIZES : AVAILABLE_SIZES).map(size => (
                 <div key={size} className="flex flex-col space-y-1 p-2 border rounded-md">
                   <label className="text-sm font-medium text-gray-700">{size}</label>
                   <input
