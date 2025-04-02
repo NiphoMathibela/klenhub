@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { X, Upload, Image as ImageIcon, Link as LinkIcon, Plus, ToggleLeft, ToggleRight } from 'lucide-react';
+import { X, ImageIcon, Link as LinkIcon, Plus, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { productService } from '../services/api';
 
@@ -31,7 +31,8 @@ interface ProductFormProps {
 
 const AVAILABLE_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']; 
 const CATEGORIES = ['SALE', 'NEW', 'TOPS', 'BOTTOMS', 'ACCESSORIES', 'SHOES'];
-const SHOE_SIZES: string[] = ['4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14'];
+const SHOE_SIZES: string[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45'];
+const BOTTOM_SIZES: string[] = ['28', '30', '32', '34', '36', '38', '40', '42', '44'];
 
 export const ProductForm: React.FC<ProductFormProps> = ({
   initialData,
@@ -185,7 +186,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     
     return new Promise<boolean>((resolve) => {
       const img = new Image();
-      let timeoutId: NodeJS.Timeout;
+      let timeoutId: number;
       
       img.onload = () => {
         setIsTestingUrl(false);
@@ -391,7 +392,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Sizes and Quantities</label>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {(formData.category === 'shoes' ? SHOE_SIZES : AVAILABLE_SIZES).map(size => (
+              {((formData.category || '').toLowerCase() === 'shoes' 
+                ? SHOE_SIZES 
+                : (formData.category || '').toLowerCase() === 'bottoms' 
+                  ? BOTTOM_SIZES 
+                  : AVAILABLE_SIZES).map(size => (
                 <div key={size} className="flex flex-col space-y-1 p-2 border rounded-md">
                   <label className="text-sm font-medium text-gray-700">{size}</label>
                   <input

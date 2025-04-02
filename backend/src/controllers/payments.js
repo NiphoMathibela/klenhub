@@ -144,10 +144,33 @@ exports.verifyPayment = async (req, res) => {
           
           for (const item of order.OrderItems) {
             if (item.Product) {
-              const product = item.Product;
-              const newStock = Math.max(0, product.stock - item.quantity);
-              await product.update({ stock: newStock });
-              console.log(`Reduced stock for product ${product.id} from ${product.stock} to ${newStock}`);
+              try {
+                // Get the product with its sizes
+                const product = await Product.findByPk(item.productId, {
+                  include: [{
+                    model: require('../models/ProductSize'),
+                    as: 'sizes'
+                  }]
+                });
+                
+                if (product && product.sizes) {
+                  // Find the specific size that was purchased
+                  const sizeItem = product.sizes.find(s => s.size === item.size);
+                  
+                  if (sizeItem) {
+                    // Reduce the quantity for this specific size
+                    const newQuantity = Math.max(0, sizeItem.quantity - item.quantity);
+                    await sizeItem.update({ quantity: newQuantity });
+                    console.log(`Reduced stock for product ${product.id}, size ${item.size} from ${sizeItem.quantity} to ${newQuantity}`);
+                  } else {
+                    console.warn(`Size ${item.size} not found for product ${product.id}`);
+                  }
+                } else {
+                  console.warn(`Product ${item.productId} or its sizes not found`);
+                }
+              } catch (sizeError) {
+                console.error(`Error updating size stock for product ${item.productId}, size ${item.size}:`, sizeError);
+              }
             } else {
               console.warn(`Product not found for OrderItem ${item.id}`);
             }
@@ -206,10 +229,33 @@ exports.handleWebhook = async (req, res) => {
           
           for (const item of order.OrderItems) {
             if (item.Product) {
-              const product = item.Product;
-              const newStock = Math.max(0, product.stock - item.quantity);
-              await product.update({ stock: newStock });
-              console.log(`Webhook: Reduced stock for product ${product.id} from ${product.stock} to ${newStock}`);
+              try {
+                // Get the product with its sizes
+                const product = await Product.findByPk(item.productId, {
+                  include: [{
+                    model: require('../models/ProductSize'),
+                    as: 'sizes'
+                  }]
+                });
+                
+                if (product && product.sizes) {
+                  // Find the specific size that was purchased
+                  const sizeItem = product.sizes.find(s => s.size === item.size);
+                  
+                  if (sizeItem) {
+                    // Reduce the quantity for this specific size
+                    const newQuantity = Math.max(0, sizeItem.quantity - item.quantity);
+                    await sizeItem.update({ quantity: newQuantity });
+                    console.log(`Webhook: Reduced stock for product ${product.id}, size ${item.size} from ${sizeItem.quantity} to ${newQuantity}`);
+                  } else {
+                    console.warn(`Webhook: Size ${item.size} not found for product ${product.id}`);
+                  }
+                } else {
+                  console.warn(`Webhook: Product ${item.productId} or its sizes not found`);
+                }
+              } catch (sizeError) {
+                console.error(`Webhook: Error updating size stock for product ${item.productId}, size ${item.size}:`, sizeError);
+              }
             } else {
               console.warn(`Webhook: Product not found for OrderItem ${item.id}`);
             }

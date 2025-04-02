@@ -73,13 +73,13 @@ const handleNewsletterSubmit = (e: React.FormEvent) => {
               </li>
               <li className="flex items-center space-x-2 sm:space-x-3">
                 <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 flex-shrink-0" />
-                <span className="text-sm text-gray-600">Mon-Fri: 9AM - 6PM</span>
+                <span className="text-sm text-gray-600">Mon - SAT: 9AM - 5:30PM / Sunday 9AM - 1PM</span>
               </li>
             </ul>
           </div>
 
           {/* Newsletter */}
-          <div className="sm:col-span-2 lg:col-span-2 mt-6 sm:mt-0">
+          {/* <div className="sm:col-span-2 lg:col-span-2 mt-6 sm:mt-0">
             <h4 className="font-semibold text-base sm:text-lg mb-4 sm:mb-6 text-gray-800">Stay Updated</h4>
             <p className="text-sm text-gray-800 mb-4">Subscribe to our newsletter for exclusive offers and updates</p>
             <form onSubmit={handleNewsletterSubmit} className="space-y-3">
@@ -94,7 +94,7 @@ const handleNewsletterSubmit = (e: React.FormEvent) => {
                 Subscribe
               </button>
             </form>
-          </div>
+          </div> */}
         </div>
 
         {/* Bottom Section */}

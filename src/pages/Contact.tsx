@@ -89,7 +89,7 @@ const Contact: React.FC = () => {
                 <h3 className="font-medium">Address</h3>
                 <p className="text-gray-600 mt-1">
                   21 Albrecht Street<br />
-                  Sandton<br />
+                  Maboneng<br />
                   Johannesburg, 2196<br />
                   South Africa
                 </p>
@@ -101,9 +101,9 @@ const Contact: React.FC = () => {
               <div>
                 <h3 className="font-medium">Business Hours</h3>
                 <p className="text-gray-600 mt-1">
-                  Monday - Friday: 9:00 AM - 6:00 PM<br />
-                  Saturday: 10:00 AM - 4:00 PM<br />
-                  Sunday: Closed
+                  Monday - Friday: 9:00 AM - 5:30 PM<br />
+                  Saturday: 9:00 AM - 5:30 PM<br />
+                  Sunday: 9:00 AM - 1:00 PM
                 </p>
               </div>
             </div>
