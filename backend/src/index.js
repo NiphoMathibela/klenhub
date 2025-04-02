@@ -35,6 +35,13 @@ app.get('/reset-password/:token', (req, res) => {
   res.redirect(`https://klenhub.co.za/reset-password/${token}`);
 });
 
+// Handle email verification redirects from frontend to backend
+app.get('/api/auth/verify-email/:token', (req, res) => {
+  const { token } = req.params;
+  // Redirect to the actual backend API endpoint
+  res.redirect(`https://service.klenhub.co.za/api/auth/verify-email/${token}`);
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);

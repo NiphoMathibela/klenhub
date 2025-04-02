@@ -36,8 +36,8 @@ exports.register = async (req, res) => {
     // Create verification token
     const verificationToken = await createToken(user.id, 'email_verification', 48);
     
-    // Send verification email
-    const verificationUrl = `https://klenhub.co.za/api/auth/verify-email/${verificationToken.token}`;
+    // Send verification email with the correct backend URL
+    const verificationUrl = `https://service.klenhub.co.za/api/auth/verify-email/${verificationToken.token}`;
     
     await sendEmail({
       to: user.email,
@@ -232,8 +232,8 @@ exports.resendVerificationEmail = async (req, res) => {
     // Create verification token
     const verificationToken = await createToken(user.id, 'email_verification', 48);
     
-    // Send verification email
-    const verificationUrl = `https://klenhub.co.za/api/auth/verify-email/${verificationToken.token}`;
+    // Send verification email with the correct backend URL
+    const verificationUrl = `https://service.klenhub.co.za/api/auth/verify-email/${verificationToken.token}`;
     
     await sendEmail({
       to: user.email,
