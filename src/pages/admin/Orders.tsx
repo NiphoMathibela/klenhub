@@ -86,9 +86,12 @@ export const Orders = () => {
       await orderService.updateOrderStatus(orderId, newStatus);
       
       // Update the order in the local state
-      setOrders(orders.map(order => 
-        order.id === orderId ? { ...order, status: newStatus } : order
-      ));
+      // Ensure orders is an array before mapping
+      if (Array.isArray(orders)) {
+        setOrders(orders.map(order => 
+          order.id === orderId ? { ...order, status: newStatus } : order
+        ));
+      }
       
       toast.success(`Order status updated to ${newStatus.toUpperCase()}`);
     } catch (err) {
@@ -101,18 +104,24 @@ export const Orders = () => {
 
   // Export orders to CSV
   const exportOrders = () => {
+    // Ensure we have valid orders to export
+    if (!Array.isArray(filteredOrders) || filteredOrders.length === 0) {
+      toast.error('No orders available to export');
+      return;
+    }
+    
     // Create CSV content
     const headers = ['Order ID', 'Customer', 'Email', 'Items', 'Total', 'Status', 'Date'];
     const csvContent = [
       headers.join(','),
       ...filteredOrders.map(order => [
-        order.id,
-        order.recipientName,
-        order.email || 'N/A',
-        Array.isArray(order.OrderItems) ? order.OrderItems.length : 0,
-        order.total,
-        order.status,
-        formatDate(order.createdAt)
+        order?.id || 'N/A',
+        order?.recipientName || 'N/A',
+        order?.email || 'N/A',
+        (order?.OrderItems && Array.isArray(order.OrderItems)) ? order.OrderItems.length : 0,
+        order?.total || 0,
+        order?.status || 'N/A',
+        order?.createdAt ? formatDate(order.createdAt) : 'N/A'
       ].join(','))
     ].join('\n');
 
@@ -127,7 +136,8 @@ export const Orders = () => {
     document.body.removeChild(link);
   };
 
-  const filteredOrders = orders.filter(order => {
+  // Ensure orders is always an array before filtering
+  const filteredOrders = (Array.isArray(orders) ? orders : []).filter(order => {
     const matchesSearch = 
       order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (order.recipientName && order.recipientName.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -224,7 +234,7 @@ export const Orders = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredOrders.map((order) => (
+                {Array.isArray(filteredOrders) && filteredOrders.map((order) => (
                   <tr key={order.id} className="border-t border-gray-100">
                     <td className="py-4 px-3 sm:px-4 text-xs sm:text-sm truncate max-w-[60px] sm:max-w-none">
                       {order.id}

@@ -3,6 +3,8 @@ const ProductSize = require('../models/ProductSize');
 const ProductImage = require('../models/ProductImage');
 const sequelize = require('../config/database'); // Fixed import path
 const { Op } = require('sequelize');
+const imageUploadService = require('../utils/imageUploadService');
+const imageUtils = require('../utils/imageUtils');
 
 // Get all products
 exports.getProducts = async (req, res) => {
@@ -84,8 +86,6 @@ exports.createProduct = async (req, res) => {
 
     // Add images if provided
     if (images && images.length > 0) {
-      const { processImage } = require('../utils/imageUtils');
-      
       await Promise.all(
         images.map(async (image, index) => {
           try {
@@ -97,18 +97,22 @@ exports.createProduct = async (req, res) => {
             if (image.path) {
               // Already processed by multer
               imageUrl = image.path;
-            } else {
+            } else if (image.url) {
               // URL-based image that needs processing
-              imageUrl = await processImage(image);
+              imageUrl = await imageUtils.processImage(image);
               console.log('Image processed successfully:', imageUrl);
+            } else {
+              console.error('Invalid image format:', image);
+              return; // Skip this image
             }
             
-            // Save the image URL to the database
-            await ProductImage.create({
-              productId: product.id,
-              imageUrl: imageUrl,
-              isMain: index === 0 // First image is main by default
-            });
+            // Save the image URL to the database using our service
+            await imageUploadService.createImageRecord(
+              ProductImage,
+              product.id,
+              imageUrl,
+              index === 0 // First image is main by default
+            );
           } catch (error) {
             console.error('Error processing image:', error.message);
             console.error('Image data:', JSON.stringify(image));
@@ -306,22 +310,17 @@ exports.deleteProduct = async (req, res) => {
 
     // Delete associated image files from the server
     if (product.images && product.images.length > 0) {
-      const fs = require('fs');
-      const path = require('path');
-      
-      product.images.forEach(image => {
-        if (image.imageUrl.startsWith('/uploads/')) {
+      await Promise.all(
+        product.images.map(async (image) => {
           try {
-            const filePath = path.join(__dirname, '../..', image.imageUrl);
-            if (fs.existsSync(filePath)) {
-              fs.unlinkSync(filePath);
-            }
+            // Use our image service to delete the file
+            await imageUploadService.deleteImage(image.imageUrl);
           } catch (err) {
             console.error('Error deleting image file:', err);
             // Continue even if file deletion fails
           }
-        }
-      });
+        })
+      );
     }
 
     // Delete the product (this will cascade delete associated records)
@@ -429,20 +428,30 @@ exports.searchProducts = async (req, res) => {
 exports.uploadProductImages = async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ error: 'No files uploaded' });
+      return res.status(400).json({ 
+        success: false,
+        error: 'No files uploaded'
+      });
     }
 
-    // Transform the files to include URLs
-    const uploadedFiles = req.files.map(file => ({
-      filename: file.filename,
-      path: `/uploads/products/${file.filename}`,
-      mimetype: file.mimetype,
-      size: file.size
-    }));
+    // Process the uploaded files using our enhanced service
+    const processedFiles = await imageUploadService.processUploadedFiles(req.files);
 
-    res.status(200).json(uploadedFiles);
+    // Log successful upload
+    console.log(`Successfully uploaded ${processedFiles.length} images:`, 
+      processedFiles.map(f => f.filename).join(', '));
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully uploaded ${processedFiles.length} images`,
+      files: processedFiles
+    });
   } catch (error) {
     console.error('Error uploading images:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Server error', 
+      message: error.message || 'Unknown error occurred during image upload'
+    });
   }
 };

@@ -19,8 +19,39 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files from the uploads directory
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Serve static files from the uploads directory with improved configuration
+const uploadsPath = path.join(__dirname, '../uploads');
+console.log('Serving static files from:', uploadsPath);
+
+// Ensure uploads directory exists
+if (!fs.existsSync(uploadsPath)) {
+  console.log('Creating uploads directory:', uploadsPath);
+  fs.mkdirSync(uploadsPath, { recursive: true });
+}
+
+// List files in uploads directory
+try {
+  const files = fs.readdirSync(uploadsPath);
+  console.log(`Found ${files.length} files in uploads directory`);
+} catch (err) {
+  console.error('Error reading uploads directory:', err);
+}
+
+// Configure static file serving with proper options
+app.use('/uploads', express.static(uploadsPath, {
+  maxAge: '1d', // Cache for 1 day
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, path) => {
+    // Set CORS headers to allow images to be loaded from any origin
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    // Set cache headers for images
+    if (path.endsWith('.jpg') || path.endsWith('.jpeg') || path.endsWith('.png') || path.endsWith('.gif')) {
+      res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day
+    }
+  }
+}));
 
 // Routes
 app.use('/api/auth', authRoutes);

@@ -55,6 +55,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [urlInputStatus, setUrlInputStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [urlInputMessage, setUrlInputMessage] = useState('');
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
+  const [uploadMessage, setUploadMessage] = useState('');
 
   useEffect(() => {
     // If we have files to upload when submitting the form
@@ -64,23 +66,104 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     }
   }, [isLoading, uploadedFiles.length]);
 
+  // Helper function to ensure proper image URL construction
+  const getFullImageUrl = (url: string): string => {
+    if (!url) return '/images/placeholder.jpg';
+    
+    // If it's already an absolute URL (starts with http:// or https://), return as is
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    
+    // If it's a relative path starting with /uploads, prepend the API base URL
+    if (url.startsWith('/uploads')) {
+      // Use the same base URL as your API
+      return `https://service.klenhub.co.za${url}`;
+    }
+    
+    // For other relative paths, return as is
+    return url;
+  };
+
   const onDrop = useCallback((acceptedFiles: File[]) => {
+    // Show upload status
+    setUploadStatus('uploading');
+    setUploadMessage(`Processing ${acceptedFiles.length} files...`);
+    
     // Store the files for later upload
     setUploadedFiles(prev => [...prev, ...acceptedFiles]);
     
-    // Preview the files immediately
+    // Upload files immediately to get server URLs
+    const uploadFiles = async () => {
+      try {
+        // Upload the files to get permanent URLs
+        const response = await productService.uploadProductImages(acceptedFiles);
+        
+        // Ensure we have a valid array of uploaded images
+        let uploadedImages = [];
+        
+        // Handle different response formats
+        if (response && Array.isArray(response)) {
+          uploadedImages = response;
+        } else if (response && response.files && Array.isArray(response.files)) {
+          uploadedImages = response.files;
+        } else if (response && response.success && response.files && Array.isArray(response.files)) {
+          uploadedImages = response.files;
+        } else {
+          console.error('Unexpected response format from image upload:', response);
+          setUploadStatus('error');
+          setUploadMessage('Server returned an invalid response. Please try again.');
+          return;
+        }
+        
+        console.log('Processed uploaded images:', uploadedImages.length);
+        
+        // Only proceed if we have valid images
+        if (uploadedImages.length > 0) {
+          // Add the uploaded images to the form data
+          setFormData(prev => ({
+            ...prev,
+            images: [
+              ...prev.images,
+              ...uploadedImages.map((img: any, index: number) => ({
+                url: getFullImageUrl(img.url || img.path),
+                isMain: prev.images.length === 0 && index === 0, // First image is main if no images exist
+                // Keep file reference for UI purposes
+                file: acceptedFiles.find(f => f.name === (img.originalName || img.filename))
+              }))
+            ]
+          }));
+          
+          setUploadStatus('success');
+          setUploadMessage(`Successfully uploaded ${uploadedImages.length} images`);
+          
+          // Clear success message after 3 seconds
+          setTimeout(() => {
+            setUploadStatus('idle');
+            setUploadMessage('');
+          }, 3000);
+        } else {
+          setUploadStatus('error');
+          setUploadMessage('No images were uploaded. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error uploading images:', error);
+        setUploadStatus('error');
+        setUploadMessage('Failed to upload images. Please try again.');
+      }
+    };
+    
+    // Start upload
+    uploadFiles();
+    
+    // Also preview the files immediately for better UX
     acceptedFiles.forEach(file => {
       const reader = new FileReader();
       reader.onload = () => {
-        const imageUrl = reader.result as string;
-        setFormData(prev => ({
-          ...prev,
-          images: [...prev.images, {
-            url: imageUrl,
-            isMain: prev.images.length === 0,
-            file
-          }]
-        }));
+        // Using the result for preview purposes only
+        // We don't need to store this value in a variable since we're not using it
+        // The actual image URLs will come from the server after upload
+        reader.result; // Access result to avoid TypeScript warning
       };
       reader.readAsDataURL(file);
     });
@@ -502,22 +585,47 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             )}
 
             {!useUrlUpload && (
-              <div
-                {...getRootProps()}
-                className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
-                  isDragActive ? 'border-black bg-gray-50' : 'border-gray-300'
-                }`}
-              >
-                <input {...getInputProps()} />
-                <div className="space-y-2">
-                  <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
-                  <p className="text-sm text-gray-600">
-                    {isDragActive
-                      ? 'Drop the images here...'
-                      : 'Drag & drop images here, or click to select files'}
-                  </p>
-                  <p className="text-xs text-gray-500">Supports: PNG, JPG, JPEG, WebP</p>
+              <div className="space-y-2">
+                <div
+                  {...getRootProps()}
+                  className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+                    isDragActive ? 'border-black bg-gray-50' : 'border-gray-300'
+                  }`}
+                >
+                  <input {...getInputProps()} />
+                  <div className="space-y-2">
+                    <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
+                    <p className="text-sm text-gray-600">
+                      {isDragActive
+                        ? 'Drop the images here...'
+                        : 'Drag & drop images here, or click to select files'}
+                    </p>
+                    <p className="text-xs text-gray-500">Supports: PNG, JPG, JPEG, WebP</p>
+                  </div>
                 </div>
+                
+                {/* Upload status indicator */}
+                {uploadStatus !== 'idle' && (
+                  <div className={`mt-2 text-sm ${uploadStatus === 'error' ? 'text-red-500' : 
+                    uploadStatus === 'success' ? 'text-green-500' : 'text-gray-500'}`}>
+                    <div className="flex items-center">
+                      {uploadStatus === 'uploading' && (
+                        <span className="inline-block w-4 h-4 mr-2 border-2 border-gray-500 border-t-transparent rounded-full animate-spin"></span>
+                      )}
+                      {uploadStatus === 'success' && (
+                        <svg className="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                      {uploadStatus === 'error' && (
+                        <svg className="w-4 h-4 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      )}
+                      {uploadMessage}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             {errors.images && <p className="mt-1 text-sm text-red-500">{errors.images}</p>}
@@ -526,14 +634,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({
               {formData.images.map((image, index) => (
                 <div key={index} className="relative group aspect-square">
                   <img
-                    src={image.url}
+                    src={getFullImageUrl(image.url)}
                     alt={`Product ${index + 1}`}
                     className={`w-full h-full object-cover rounded-md ${
                       image.isMain ? 'ring-2 ring-black' : ''
                     }`}
                     onError={(e) => {
-                      // Handle image loading errors
-                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150?text=Image+Error';
+                      // Handle image loading errors with a local fallback
+                      (e.target as HTMLImageElement).src = '/images/placeholder.jpg';
                     }}
                   />
                   <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-2">
