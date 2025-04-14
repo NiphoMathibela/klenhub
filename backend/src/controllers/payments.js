@@ -1,9 +1,9 @@
 const { Order, OrderItem } = require('../models/Order');
 const Product = require('../models/Product');
-const paystackService = require('../services/paystack');
+const yocoService = require('../services/yoco');
 
 /**
- * Initialize a Paystack payment for an order
+ * Initialize a YOCO payment for an order
  * @param {Object} req - Request object
  * @param {Object} res - Response object
  */
@@ -30,8 +30,11 @@ exports.createPayment = async (req, res) => {
     const orderData = order.get({ plain: true });
     console.log(`Order data prepared: ${JSON.stringify(orderData)}`);
     
-    // Initialize Paystack transaction
-    const payment = await paystackService.initializeTransaction(orderData, req.user);
+    // Initialize YOCO payment
+    console.log('Sending order data to YOCO service:', JSON.stringify(orderData));
+    console.log('User data for YOCO:', JSON.stringify(req.user));
+    
+    const payment = await yocoService.initializePayment(orderData, req.user);
     console.log(`Payment initialized, redirecting to: ${payment.authorizationUrl}`);
     
     // Update order status
@@ -121,7 +124,7 @@ exports.verifyPayment = async (req, res) => {
       order.items = [];
     }
     
-    // Try to verify with Paystack
+    // Try to verify with YOCO
     let verification = {
       success: false,
       status: 'pending',
@@ -130,7 +133,7 @@ exports.verifyPayment = async (req, res) => {
     
     try {
       // Attempt to verify, but don't let errors block the process
-      verification = await paystackService.verifyTransaction(reference);
+      verification = await yocoService.verifyPayment(reference);
       console.log(`Paystack verification result:`, verification);
       
       // Update order status based on payment status
@@ -179,7 +182,7 @@ exports.verifyPayment = async (req, res) => {
       }
     } catch (verifyError) {
       // Log the verification error but continue processing
-      console.error('Paystack verification error, continuing with order processing:', verifyError.message);
+      console.error('YOCO verification error, continuing with order processing:', verifyError.message);
     }
     
     // Always return the order, even if verification fails
@@ -202,12 +205,12 @@ exports.verifyPayment = async (req, res) => {
 exports.handleWebhook = async (req, res) => {
   try {
     // Get signature from headers
-    const signature = req.headers['x-paystack-signature'];
+    const signature = req.headers['x-yoco-signature'];
     
     // Process webhook event
-    const event = await paystackService.handleWebhook(req.body, signature);
+    const event = await yocoService.handleWebhook(req.body, signature);
     
-    if (event.event === 'charge.success') {
+    if (event.event === 'charge.successful') {
       // Get order with items and products
       const order = await Order.findOne({
         where: { paymentReference: event.reference },
@@ -264,7 +267,7 @@ exports.handleWebhook = async (req, res) => {
       }
     }
     
-    // Respond with 200 (Paystack expects this)
+    // Respond with 200 (YOCO expects this)
     res.status(200).send('OK');
   } catch (error) {
     console.error('Webhook handling error:', error);

@@ -810,9 +810,9 @@ export const adminService = {
   }
 };
 
-// Payment Services
+// YOCO Payment Services
 export const paymentService = {
-  // Create a payment for an order
+  // Create a YOCO payment for an order
   createPayment: async (orderId: string) => {
     try {
       // For direct API access in development, use the full URL
@@ -846,7 +846,7 @@ export const paymentService = {
   },
   
   /**
-   * Verify payment after checkout
+   * Verify YOCO payment after checkout
    * @param reference Payment reference
    * @returns Payment verification result
    */
@@ -886,7 +886,7 @@ export const paymentService = {
   },
   
   /**
-   * Get payment status
+   * Get YOCO payment status
    * @param reference Payment reference
    * @returns Payment status
    */
@@ -926,7 +926,7 @@ export const paymentService = {
   },
   
   /**
-   * Handle payment callback
+   * Handle YOCO payment callback
    * @param reference Payment reference
    * @returns Callback handling result
    */

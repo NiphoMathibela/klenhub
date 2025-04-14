@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { orderService, paymentService } from '../services/api';
+import { orderService } from '../services/api';
+import YocoCheckout from '../components/YocoCheckout';
 
 type DeliveryFormData = {
   recipientName: string;
@@ -22,6 +22,8 @@ export const Checkout = () => {
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPayment, setShowPayment] = useState(false);
+  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
   const [formData, setFormData] = useState<DeliveryFormData>({
     recipientName: user?.name || '',
     phoneNumber: '',
@@ -69,7 +71,7 @@ export const Checkout = () => {
       setError(null);
 
       // 1. Create the order with delivery details
-      const orderData = {
+      const orderPayload = {
         items: state.items.map(item => ({
           productId: String(item.product.id), // Convert to string to match expected type
           quantity: item.quantity,
@@ -79,18 +81,13 @@ export const Checkout = () => {
         ...formData
       };
 
-      const order = await orderService.createOrder(orderData);
+      const order = await orderService.createOrder(orderPayload);
 
-      // 2. Create payment and get redirect URL
+      // 2. Show the YOCO payment component
       if (order && order.id) {
-        const payment = await paymentService.createPayment(order.id);
-        
-        // 3. Redirect to payment gateway
-        if (payment && payment.redirectUrl) {
-          window.location.href = payment.redirectUrl;
-        } else {
-          throw new Error('Failed to get payment redirect URL');
-        }
+        setCreatedOrderId(order.id);
+        setShowPayment(true);
+        setIsProcessing(false);
       } else {
         throw new Error('Failed to create order');
       }
@@ -101,26 +98,18 @@ export const Checkout = () => {
     }
   };
 
-  const fadeIn = {
-    initial: { opacity: 0 },
-    animate: { opacity: 1 },
-    transition: { duration: 0.5 }
-  };
-
   return (
-    <motion.div 
-      className="min-h-screen pt-20 sm:pt-24 md:pt-32 pb-16 sm:pb-24"
-      initial="initial"
-      animate="animate"
-      variants={fadeIn}
-    >
+    <div className="min-h-screen pt-20 sm:pt-24 md:pt-32 pb-16 sm:pb-24">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-12">
         <h1 className="text-2xl sm:text-3xl tracking-[0.2em] font-light mb-8 sm:mb-16">CHECKOUT</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16">
-          {/* Delivery Form */}
+          {/* Delivery Form or Payment */}
           <div className="lg:col-span-8">
-            <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
+            {showPayment && createdOrderId ? (
+              <YocoCheckout orderId={createdOrderId} amount={total} />
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
               <div className="space-y-4 sm:space-y-6">
                 <h2 className="text-lg sm:text-xl tracking-[0.15em] font-light">DELIVERY DETAILS</h2>
                 
@@ -278,6 +267,7 @@ export const Checkout = () => {
                 {isProcessing ? 'PROCESSING...' : 'PROCEED TO PAYMENT'}
               </button>
             </form>
+            )}
           </div>
           
           {/* Order Summary */}
@@ -323,7 +313,7 @@ export const Checkout = () => {
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 };
 
