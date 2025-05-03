@@ -22,7 +22,7 @@ const handleNewsletterSubmit = (e: React.FormEvent) => {
           <div className="flex flex-col items-center text-center">
             <Truck className="h-6 w-6 sm:h-8 sm:w-8 mb-2 sm:mb-3 text-gray-800" />
             <h5 className="font-semibold mb-1 text-sm sm:text-base text-gray-800">Free Shipping</h5>
-            <p className="text-xs sm:text-sm text-gray-600">On orders over R1000</p>
+            <p className="text-xs sm:text-sm text-gray-600">On orders over R2500</p>
           </div>
           <div className="flex flex-col items-center text-center">
             <RefreshCcw className="h-6 w-6 sm:h-8 sm:w-8 mb-2 sm:mb-3 text-gray-800" />

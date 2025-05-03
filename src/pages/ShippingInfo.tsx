@@ -28,8 +28,8 @@ const ShippingInfo: React.FC = () => {
             <div className="bg-gray-50 p-4 rounded-lg">
               <p className="font-medium">Cost:</p>
               <ul className="list-disc list-inside text-gray-600 ml-4 mt-2">
-                <li>Free for orders over R1000</li>
-                <li>R75 for orders under R1000</li>
+                <li>Free for orders over R2500</li>
+                <li>R200 for orders under R2500</li>
               </ul>
             </div>
           </div>
@@ -57,7 +57,7 @@ const ShippingInfo: React.FC = () => {
             <div className="bg-gray-50 p-4 rounded-lg">
               <p className="font-medium">Cost:</p>
               <ul className="list-disc list-inside text-gray-600 ml-4 mt-2">
-                <li>Neighboring countries (Botswana, Namibia, Lesotho, Swaziland): R250</li>
+                <li>Neighboring countries (Botswana, Namibia, Lesotho, Swaziland): R350</li>
                 <li>Other African countries: R450</li>
               </ul>
             </div>

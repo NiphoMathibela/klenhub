@@ -2,8 +2,8 @@ const axios = require('axios');
 
 // YOCO configuration
 const config = {
-  publicKey: process.env.YOCO_PUBLIC_KEY || 'pk_test_1bdbba42yW69nnw90624',
-  secretKey: process.env.YOCO_SECRET_KEY || 'sk_test_47107f7cJ1qmJJQ3deb43e38b8c5', // You'll need to set this in your .env file
+  publicKey:'pk_live_17962915yW69nnw35fa4',
+  secretKey: 'sk_live_a19c2630J1qmJJQdadd411bac51c', // You'll need to set this in your .env file
   baseUrl: 'https://payments.yoco.com/api',
   callbackUrl: 'https://klenhub.co.za/payment/verify', // Always use the production domain
 };

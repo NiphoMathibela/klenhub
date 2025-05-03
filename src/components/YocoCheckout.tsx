@@ -26,7 +26,7 @@ const YocoCheckout: React.FC<YocoCheckoutProps> = ({ orderId, amount }) => {
       
       // Initialize the Yoco SDK
       const yoco = new window.YocoSDK({
-        publicKey: 'pk_test_1bdbba42yW69nnw90624'
+        publicKey: 'pk_live_17962915yW69nnw35fa4'
       });
       
       // Convert amount to cents as required by Yoco

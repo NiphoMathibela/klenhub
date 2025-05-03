@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { Minus, Plus, X } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 export const Cart = () => {
   const { state, dispatch } = useCart();
@@ -12,7 +14,7 @@ export const Cart = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const updateQuantity = (productId: string, size: string, quantity: number) => {
+  const updateQuantity = (productId: number, size: string, quantity: number) => {
     dispatch({ 
       type: 'UPDATE_QUANTITY', 
       payload: { 
@@ -21,9 +23,10 @@ export const Cart = () => {
         quantity: Math.max(1, quantity) 
       } 
     });
+    toast.info('Cart updated');
   };
 
-  const removeFromCart = (productId: string, size: string) => {
+  const removeFromCart = (productId: number, size: string) => {
     dispatch({ 
       type: 'REMOVE_FROM_CART', 
       payload: { 
@@ -31,6 +34,7 @@ export const Cart = () => {
         size 
       } 
     });
+    toast.success('Item removed from cart');
   };
 
   const subtotal = state.items.reduce(
@@ -126,14 +130,14 @@ export const Cart = () => {
                   <div className="flex justify-between items-end">
                     <div className="flex items-center space-x-3 sm:space-x-4">
                       <button
-                        onClick={() => updateQuantity(String(item.product.id), item.size, item.quantity - 1)}
+                        onClick={() => updateQuantity(item.product.id, item.size, item.quantity - 1)}
                         className="p-1 hover:text-gray-600 transition-colors"
                       >
                         <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
                       </button>
                       <span className="text-xs sm:text-sm tracking-[0.1em]">{item.quantity}</span>
                       <button
-                        onClick={() => updateQuantity(String(item.product.id), item.size, item.quantity + 1)}
+                        onClick={() => updateQuantity(item.product.id, item.size, item.quantity + 1)}
                         className="p-1 hover:text-gray-600 transition-colors"
                       >
                         <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -145,7 +149,7 @@ export const Cart = () => {
                         R{(item.product.price * item.quantity).toFixed(2)}
                       </p>
                       <button
-                        onClick={() => removeFromCart(String(item.product.id), item.size)}
+                        onClick={() => removeFromCart(item.product.id, item.size)}
                         className="p-1 text-gray-400 hover:text-black transition-colors"
                       >
                         <X className="h-3 w-3 sm:h-4 sm:w-4" />
