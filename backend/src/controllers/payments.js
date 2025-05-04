@@ -55,6 +55,93 @@ exports.createPayment = async (req, res) => {
 };
 
 /**
+ * Charge a YOCO payment using a payment token
+ * @param {Object} req - Request object
+ * @param {Object} res - Response object
+ */
+exports.chargePayment = async (req, res) => {
+  try {
+    const { token, orderId } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ error: 'Payment token is required' });
+    }
+    if (!orderId) {
+      return res.status(400).json({ error: 'Order ID is required' });
+    }
+
+    // Get the order
+    const order = await Order.findByPk(orderId);
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    // Check if order belongs to the user
+    if (order.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Not authorized to access this order' });
+    }
+
+    // Convert order total to cents
+    const amountInCents = Math.round(parseFloat(order.total) * 100);
+
+    // Create charge metadata
+    const metadata = {
+      order_id: order.id,
+      customer_name: req.user.name || "Customer",
+      customer_email: req.user.email
+    };
+
+    // Create charge using YOCO service
+    const charge = await yocoService.createCharge(token, amountInCents, metadata);
+
+    if (charge.status !== 'successful') {
+      return res.status(400).json({ error: 'Payment was not successful' });
+    }
+
+    // Update order status and payment reference
+    await order.update({
+      status: 'processing',
+      paymentReference: charge.chargeId
+    });
+
+    // Reduce stock for each item in the order
+    const orderItems = await order.getOrderItems({ include: [Product] });
+    for (const item of orderItems) {
+      if (item.Product) {
+        try {
+          const product = await Product.findByPk(item.productId, {
+            include: [{
+              model: require('../models/ProductSize'),
+              as: 'sizes'
+            }]
+          });
+
+          if (product && product.sizes) {
+            const sizeItem = product.sizes.find(s => s.size === item.size);
+            if (sizeItem) {
+              const newQuantity = Math.max(0, sizeItem.quantity - item.quantity);
+              await sizeItem.update({ quantity: newQuantity });
+            }
+          }
+        } catch (sizeError) {
+          console.error(`Error updating stock for product ${item.productId}, size ${item.size}:`, sizeError);
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Payment successful and order processed',
+      orderId: order.id,
+      chargeId: charge.chargeId
+    });
+  } catch (error) {
+    console.error('Charge payment error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+/**
  * Verify Paystack payment
  * @param {Object} req - Request object
  * @param {Object} res - Response object

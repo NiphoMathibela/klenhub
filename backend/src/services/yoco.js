@@ -196,10 +196,3 @@ const handleWebhook = async (payload, signature) => {
     throw error;
   }
 };
-
-module.exports = {
-  initializePayment,
-  verifyPayment,
-  handleWebhook,
-  config
-};

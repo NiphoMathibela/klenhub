@@ -47,13 +47,31 @@ const YocoCheckout: React.FC<YocoCheckoutProps> = ({ orderId, amount }) => {
           
           // Payment was successful, verify on your server
           try {
-            // Here we would normally send the token to the server to complete the charge
-            // But since we're having issues with the backend, we'll simulate success
-            console.log('Payment successful with token:', result.id);
-            
+            // Send the token to the backend to complete the charge
+            const response = await fetch('/api/payments/charge', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                token: result.id,
+                orderId: orderId
+              })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+              setError(data.error || 'Payment failed on server');
+              setIsProcessing(false);
+              return;
+            }
+
+            console.log('Payment successful and charged:', data);
+
             // Clear the cart
             dispatch({ type: 'CLEAR_CART' });
-            
+
             // Redirect to the success page
             navigate(`/payment/verify?reference=${orderId}`);
           } catch (verifyError) {

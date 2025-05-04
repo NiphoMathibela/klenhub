@@ -60,7 +60,7 @@ export const Checkout = () => {
     0
   );
 
-  const shipping = subtotal > 800 ? 0 : 60;
+  const shipping = subtotal > 800 ? 0 : 0;
   const total = subtotal + shipping;
 
   const handleSubmit = async (e: React.FormEvent) => {
