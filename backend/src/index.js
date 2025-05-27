@@ -16,6 +16,10 @@ const app = express();
 
 // Middleware
 app.use(cors());
+
+// Middleware for Yoco webhook - needs raw body for signature verification
+// This MUST come BEFORE the general express.json() middleware for this specific path
+app.use('/api/payments/yoco/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

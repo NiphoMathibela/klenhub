@@ -1,0 +1,606 @@
+const { Order, OrderItem } = require('../models/Order');
+const Product = require('../models/Product');
+const ProductSize = require('../models/ProductSize');
+const yocoService = require('../services/yoco');
+const paystackService = require('../services/paystack');
+const Payment = require('../models/Payment');
+
+/**
+ * Helper function to reduce stock for an order
+ * @param {Object} order - Order object
+ */
+async function reduceStockForOrder(order) {
+  try {
+    console.log(`Reducing stock for order ${order.id}`);
+    const orderItems = order.OrderItems || await order.getOrderItems({ include: [Product] });
+    
+    if (!orderItems || orderItems.length === 0) {
+      console.warn(`No order items found for order ${order.id}`);
+      return;
+    }
+    
+    console.log(`Processing ${orderItems.length} items for stock reduction`);
+    
+    for (const item of orderItems) {
+      if (!item.productId) {
+        console.warn(`OrderItem ${item.id} has no productId`);
+        continue;
+      }
+      
+      try {
+        // Get the product with its sizes
+        const product = await Product.findByPk(item.productId, {
+          include: [{
+            model: ProductSize,
+            as: 'sizes'
+          }]
+        });
+        
+        if (!product) {
+          console.warn(`Product ${item.productId} not found`);
+          continue;
+        }
+        
+        if (!product.sizes || product.sizes.length === 0) {
+          console.warn(`Product ${item.productId} has no sizes`);
+          continue;
+        }
+        
+        // Find the specific size that was purchased
+        const sizeItem = product.sizes.find(s => s.size === item.size);
+        
+        if (!sizeItem) {
+          console.warn(`Size ${item.size} not found for product ${product.id}`);
+          continue;
+        }
+        
+        // Calculate new quantity ensuring it doesn't go below zero
+        const currentQuantity = sizeItem.quantity || 0;
+        const newQuantity = Math.max(0, currentQuantity - item.quantity);
+        
+        // Update the quantity
+        await sizeItem.update({ quantity: newQuantity });
+        console.log(`Reduced stock for product ${product.id}, size ${item.size} from ${currentQuantity} to ${newQuantity}`);
+        
+      } catch (itemError) {
+        console.error(`Error processing stock for item ${item.id}:`, itemError);
+      }
+    }
+  } catch (error) {
+    console.error('Error reducing stock for order:', error);
+  }
+}
+
+/**
+ * Initialize a payment for an order
+ * @param {Object} req - Request object
+ * @param {Object} res - Response object
+ */
+exports.createPayment = async (req, res) => {
+  try {
+    const { orderId } = req.body;
+    
+    console.log(`Creating payment for order: ${orderId}`);
+    
+    // Get the order with detailed error handling
+    let order;
+    try {
+      order = await Order.findByPk(orderId);
+      if (!order) {
+        console.error(`Order not found with ID: ${orderId}`);
+        return res.status(404).json({ error: 'Order not found' });
+      }
+    } catch (dbError) {
+      console.error(`Database error finding order ${orderId}:`, dbError);
+      return res.status(500).json({ error: 'Database error locating order', details: dbError.message });
+    }
+    
+    console.log(`Order found: ${order.id}, Total: ${order.total}, Type: ${typeof order.total}`);
+    
+    // Check if order belongs to the user
+    if (order.userId !== req.user.id) {
+      console.error(`Authorization failed: Order ${orderId} belongs to user ${order.userId}, not ${req.user.id}`);
+      return res.status(403).json({ error: 'Not authorized to access this order' });
+    }
+    
+    // Verify the order is in a valid state for payment
+    if (order.status === 'paid' || order.status === 'completed') {
+      console.log(`Order ${orderId} is already paid, returning existing payment info`);
+      return res.json({
+        success: true,
+        message: 'Order is already paid',
+        redirectUrl: `https://klenhub.co.za/payment/success?reference=${order.paymentReference || order.id}`,
+        reference: order.paymentReference || order.id
+      });
+    }
+    
+    // Convert order to plain object to ensure proper data handling
+    const orderData = order.get({ plain: true });
+    console.log(`Order data prepared for payment processing`);
+    
+    // Try all payment services with full error handling
+    let payment = null;
+    let paymentProvider = '';
+    let error = null;
+    
+    // First try Yoco if that's our primary provider
+    try {
+      console.log('Attempting payment with Yoco service');
+      payment = await yocoService.initializePayment(orderData, req.user);
+      console.log(`Yoco payment initialized successfully`);
+      paymentProvider = 'yoco';
+    } catch (yocoError) {
+      console.error('Yoco payment initialization failed:', yocoError);
+      error = yocoError;
+      
+      // If Yoco fails, try Paystack as fallback
+      if (process.env.USE_PAYSTACK_FALLBACK === 'true') {
+        console.log('Attempting fallback to Paystack service');
+        try {
+          payment = await paystackService.initializePayment(orderData, req.user);
+          console.log(`Paystack payment initialized successfully, redirecting to: ${payment.authorizationUrl}`);
+          paymentProvider = 'paystack';
+          error = null; // Clear the error since fallback succeeded
+        } catch (paystackError) {
+          console.error('Paystack fallback payment initialization failed:', paystackError);
+          error = paystackError;
+        }
+      }
+    }
+    
+    // Handle case where all payment options failed
+    if (!payment) {
+      console.error('All payment initialization attempts failed');
+      const errorMessage = error ? error.message : 'Unknown payment initialization error';
+      return res.status(500).json({ 
+        error: 'Payment initialization failed', 
+        details: errorMessage 
+      });
+    }
+    
+    // Save payment information
+    try {
+      // Create a new payment record
+      await Payment.create({
+        orderId: order.id,
+        reference: payment.reference,
+        checkoutId: payment.id,
+        provider: paymentProvider,
+        amount: orderData.total,
+        status: 'pending',
+        metadata: {
+          userId: req.user.id,
+          email: req.user.email
+        }
+      });
+      
+      // Update order with payment reference
+      await order.update({
+        paymentReference: payment.reference || payment.id,
+        paymentProvider: paymentProvider
+      });
+      
+      console.log(`Payment record created for order ${order.id}, provider: ${paymentProvider}`);
+    } catch (dbError) {
+      console.error('Error creating payment record:', dbError);
+      // Continue with payment process even if record saving fails
+    }
+    
+    // Return successful response
+    res.json({
+      success: true,
+      redirectUrl: payment.authorizationUrl || payment.checkoutUrl,
+      reference: payment.reference || payment.id,
+      provider: paymentProvider
+    });
+  } catch (error) {
+    console.error('Payment creation error:', error);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+};
+
+/**
+ * Verify payment status
+ * @param {Object} req - Request object
+ * @param {Object} res - Response object
+ */
+exports.verifyPayment = async (req, res) => {
+  try {
+    const { reference } = req.query;
+    
+    if (!reference) {
+      return res.status(400).json({ error: 'Reference is required' });
+    }
+    
+    console.log(`Verifying payment with reference: ${reference}`);
+    
+    // Check if we have a payment record for this reference
+    let payment = null;
+    try {
+      payment = await Payment.findOne({
+        where: { 
+          reference: reference 
+        }
+      });
+      
+      // If not found by reference, try by checkoutId
+      if (!payment) {
+        payment = await Payment.findOne({
+          where: { 
+            checkoutId: reference 
+          }
+        });
+      }
+    } catch (dbError) {
+      console.error(`Database error fetching payment record:`, dbError);
+    }
+    
+    // Get order information
+    let order = null;
+    let orderId = null;
+    
+    if (payment && payment.orderId) {
+      // Get order ID from payment record
+      orderId = payment.orderId;
+      console.log(`Found payment record with order ID: ${orderId}`);
+    } else {
+      // Try to find order by payment reference
+      try {
+        order = await Order.findOne({
+          where: { paymentReference: reference },
+          include: [{ 
+            model: OrderItem,
+            include: [Product]
+          }]
+        });
+        
+        if (order) {
+          orderId = order.id;
+          console.log(`Found order by payment reference: ${orderId}`);
+        }
+      } catch (refError) {
+        console.error(`Error looking up order by reference:`, refError);
+      }
+      
+      // If still not found and reference might contain order ID (like order_UUID_timestamp)
+      if (!order && reference && reference.includes('_')) {
+        const parts = reference.split('_');
+        if (parts.length >= 2) {
+          const possibleOrderId = parts[1]; // Extract the UUID part
+          
+          try {
+            order = await Order.findByPk(possibleOrderId, {
+              include: [{ 
+                model: OrderItem,
+                include: [Product]
+              }]
+            });
+            
+            if (order) {
+              orderId = order.id;
+              console.log(`Found order by extracted ID from reference: ${orderId}`);
+            }
+          } catch (idError) {
+            console.error(`Error looking up order by ID from reference:`, idError);
+          }
+        }
+      }
+    }
+    
+    // If we still don't have an order, but have an order ID, fetch it
+    if (!order && orderId) {
+      try {
+        order = await Order.findByPk(orderId, {
+          include: [{ 
+            model: OrderItem,
+            include: [Product]
+          }]
+        });
+        console.log(`Fetched order ${orderId} using ID from payment record`);
+      } catch (orderError) {
+        console.error(`Error fetching order ${orderId}:`, orderError);
+      }
+    }
+    
+    // If no order found, report error
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    
+    // Determine which payment provider was used
+    const provider = order.paymentProvider || (payment ? payment.provider : null) || 'unknown';
+    console.log(`Payment provider for order ${order.id}: ${provider}`);
+    
+    // Verify payment with the appropriate provider
+    let verification = null;
+    
+    if (provider === 'yoco') {
+      try {
+        console.log(`Verifying Yoco payment for order ${order.id}`);
+        verification = await yocoService.verifyPayment(reference, order);
+      } catch (yocoError) {
+        console.error('Yoco verification error:', yocoError);
+      }
+    } else if (provider === 'paystack') {
+      try {
+        console.log(`Verifying Paystack payment for order ${order.id}`);
+        verification = await paystackService.verifyPayment(reference);
+      } catch (paystackError) {
+        console.error('Paystack verification error:', paystackError);
+      }
+    }
+    
+    // Default to unknown status if verification failed
+    if (!verification) {
+      verification = { status: 'unknown' };
+    }
+    
+    // Update payment record status if we have one
+    if (payment) {
+      try {
+        await payment.update({
+          status: verification.status,
+          verifiedAt: new Date()
+        });
+        console.log(`Updated payment record ${payment.id} status to ${verification.status}`);
+      } catch (updateError) {
+        console.error('Error updating payment record:', updateError);
+      }
+    }
+    
+    // Update order status based on payment status
+    if (verification.status === 'success') {
+      await order.update({ status: 'processing' });
+      console.log(`Order ${order.id} updated to status: processing`);
+      
+      // Reduce stock for items in the order after payment confirmation
+      await reduceStockForOrder(order);
+    }
+    
+    // Return verification result
+    res.json({
+      success: true,
+      order,
+      verification
+    });
+  } catch (error) {
+    console.error('Payment verification error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+/**
+ * Handle payment webhooks (supports Yoco and Paystack)
+ * @param {Object} req - Request object
+ * @param {Object} res - Response object
+ */
+exports.handleWebhook = async (req, res) => {
+  try {
+    console.log('Webhook received:', req.body);
+    
+    // Determine the webhook source based on headers
+    let event;
+    let paymentProvider = 'unknown';
+    
+    // Check for Yoco signature
+    if (req.headers['x-yoco-signature']) {
+      console.log('Processing Yoco webhook');
+      paymentProvider = 'yoco';
+      event = await yocoService.handleWebhook(req.body, req.headers['x-yoco-signature']);
+    } 
+    // Check for Paystack signature
+    else if (req.headers['x-paystack-signature']) {
+      console.log('Processing Paystack webhook');
+      paymentProvider = 'paystack';
+      event = await paystackService.handleWebhook(req.body, req.headers['x-paystack-signature']);
+    }
+    // No known signature
+    else {
+      console.warn('Unknown webhook source, attempting to process as generic');
+      // Try to extract data from a generic webhook
+      event = {
+        success: true,
+        event: req.body.event || 'unknown',
+        reference: req.body.reference || (req.body.data ? req.body.data.reference : null),
+        status: req.body.status || (req.body.data ? req.body.data.status : null)
+      };
+    }
+    
+    console.log('Parsed webhook event:', event);
+    
+    // Process payment success events
+    if (event.success && 
+        (event.event === 'charge.success' || 
+         event.event === 'payment.succeeded' || 
+         event.event === 'charge.successful')) {
+      
+      // Find the related order
+      let order;
+      
+      // Try finding by payment reference
+      if (event.reference) {
+        order = await Order.findOne({
+          where: { paymentReference: event.reference },
+          include: [{ 
+            model: OrderItem,
+            include: [Product]
+          }]
+        });
+      }
+      
+      // If not found and we have an orderId, try that
+      if (!order && event.orderId) {
+        order = await Order.findByPk(event.orderId, {
+          include: [{ 
+            model: OrderItem,
+            include: [Product]
+          }]
+        });
+      }
+      
+      // If we found an order, update its status and reduce stock
+      if (order) {
+        console.log(`Webhook: Payment confirmed for order ${order.id}`);
+        
+        // Update order status if not already processed
+        if (order.status !== 'processing' && order.status !== 'completed') {
+          await order.update({ 
+            status: 'processing',
+            paymentProvider: paymentProvider
+          });
+          
+          // Also update the payment record if it exists
+          try {
+            const payment = await Payment.findOne({
+              where: { orderId: order.id }
+            });
+            
+            if (payment) {
+              await payment.update({
+                status: 'success',
+                verifiedAt: new Date()
+              });
+              console.log(`Payment record ${payment.id} updated to success`);
+            }
+          } catch (paymentError) {
+            console.error('Error updating payment record:', paymentError);
+          }
+          
+          // Reduce stock for items in the order
+          await reduceStockForOrder(order);
+        }
+      } else {
+        console.warn(`Webhook: Could not find order for reference ${event.reference}`);
+      }
+    }
+    
+    // Always respond with 200 (payment providers expect this)
+    res.status(200).send('OK');
+  } catch (error) {
+    console.error('Webhook handling error:', error);
+    res.status(500).send('Server error');
+  }
+};
+
+/**
+ * Handle successful payment return
+ * @param {Object} req - Request object
+ * @param {Object} res - Response object
+ */
+exports.handleSuccess = async (req, res) => {
+  try {
+    const { reference, checkoutId } = req.query;
+    
+    if (!reference && !checkoutId) {
+      return res.status(400).json({ error: 'Reference or checkoutId is required' });
+    }
+    
+    const referenceValue = reference || checkoutId;
+    console.log(`Payment success request for reference: ${referenceValue}`);
+    
+    // Find order using multiple lookup strategies
+    let order = null;
+    
+    // Strategy 1: Look up by reference
+    try {
+      order = await Order.findOne({
+        where: { paymentReference: referenceValue },
+        include: [{ 
+          model: OrderItem,
+          include: [Product]
+        }]
+      });
+      
+      if (order) {
+        console.log(`Order found by payment reference: ${referenceValue}`);
+      }
+    } catch (refError) {
+      console.error(`Error looking up order by reference:`, refError);
+    }
+    
+    // Strategy 2: If reference contains order ID (like order_UUID_timestamp)
+    if (!order && referenceValue && referenceValue.includes('_')) {
+      const parts = referenceValue.split('_');
+      if (parts.length >= 2) {
+        const possibleOrderId = parts[1]; // Extract the UUID part
+        
+        try {
+          order = await Order.findByPk(possibleOrderId, {
+            include: [{ 
+              model: OrderItem,
+              include: [Product]
+            }]
+          });
+          
+          if (order) {
+            console.log(`Order found by extracted ID from reference: ${possibleOrderId}`);
+          }
+        } catch (idError) {
+          console.error(`Error looking up order by ID from reference:`, idError);
+        }
+      }
+    }
+    
+    // Strategy 3: Check Payment model if we have a checkout ID
+    if (!order && checkoutId) {
+      try {
+        const payment = await Payment.findOne({ where: { checkoutId } });
+        
+        if (payment && payment.orderId) {
+          order = await Order.findByPk(payment.orderId, {
+            include: [{ 
+              model: OrderItem,
+              include: [Product]
+            }]
+          });
+          
+          if (order) {
+            console.log(`Order found via Payment record with checkout ID: ${checkoutId}`);
+          }
+        }
+      } catch (paymentError) {
+        console.error(`Error looking up payment:`, paymentError);
+      }
+    }
+    
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    
+    // Process the order items for frontend display
+    if (order.OrderItems && order.OrderItems.length > 0) {
+      order.items = order.OrderItems.map(item => ({
+        id: item.id,
+        productId: item.productId,
+        name: item.Product ? item.Product.name : 'Product Not Available',
+        price: item.price,
+        quantity: item.quantity,
+        size: item.size,
+        image: item.Product ? item.Product.image : null
+      }));
+    } else {
+      order.items = [];
+    }
+    
+    res.json({
+      success: true,
+      order: {
+        id: order.id,
+        status: order.status,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+        total: order.total,
+        shipping: order.shipping || 0,
+        shippingAddress: order.shippingAddress,
+        email: order.email,
+        phone: order.phone,
+        paymentReference: order.paymentReference,
+        paymentProvider: order.paymentProvider,
+        items: order.items
+      }
+    });
+  } catch (error) {
+    console.error('Payment success handling error:', error);
+    res.status(500).json({ error: 'Server error', details: error.message });
+  }
+};

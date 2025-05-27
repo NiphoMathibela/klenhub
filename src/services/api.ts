@@ -810,83 +810,255 @@ export const adminService = {
   }
 };
 
-// YOCO Payment Services
+// Payment Services (Yoco Integration)
 export const paymentService = {
-  // Create a YOCO payment for an order
+  // Create a payment for an order (Yoco implementation)
   createPayment: async (orderId: string) => {
     try {
+      console.log(`Initializing payment for order: ${orderId}`);
+      
       // For direct API access in development, use the full URL
       let url = `/payments/create`;
-      let response;
+      let response: { data: any } | null = null;
       
-      // Special handling for production environment
-      if (window.location.hostname !== 'localhost') {
-        // Try to use a direct API call to the backend server
+      // Multi-method fallback strategy to ensure robust payment initialization
+      try {
+        // First attempt: axios with explicit headers
+        console.log('Attempting direct API call to initialize payment');
+        const baseUrl = window.location.hostname !== 'localhost' 
+          ? 'https://service.klenhub.co.za/api' 
+          : '/api';
+          
+        response = await axios.post(`${baseUrl}/payments/create`, { orderId }, {
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}` 
+          },
+          timeout: 15000 // 15 second timeout for payment processing
+        });
+      } catch (directApiError) {
+        console.warn('Direct API call failed with axios, falling back to alternative method:', directApiError);
+        
+        // Second attempt: Using the axios instance from api
         try {
-          response = await axios.post(`https://service.klenhub.co.za/api/payments/create`, { orderId }, {
-            headers: { 
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}` 
-            }
-          });
-        } catch (directApiError) {
-          console.warn('Direct API call failed, falling back to relative URL:', directApiError);
-          // Fall back to relative URL if direct call fails
           response = await api.post(url, { orderId });
+        } catch (apiError) {
+          console.warn('API instance call failed, trying XMLHttpRequest as last resort:', apiError);
+          
+          // Final fallback: XMLHttpRequest (available in all browsers)
+          response = await new Promise<{ data: any }>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', url);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.setRequestHeader('Authorization', `Bearer ${localStorage.getItem('token')}`);
+            xhr.timeout = 20000; // 20 second timeout
+            
+            xhr.onload = function() {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                resolve({ data: JSON.parse(xhr.responseText) });
+              } else {
+                reject(new Error(`Request failed with status ${xhr.status}`));
+              }
+            };
+            
+            xhr.onerror = function() {
+              reject(new Error('XHR request failed'));
+            };
+            
+            xhr.send(JSON.stringify({ orderId }));
+          });
         }
-      } else {
-        response = await api.post(url, { orderId });
+      }
+      
+      if (!response || !response.data) {
+        throw new Error('Invalid response from payment service');
+      }
+      
+      // Check if we got a redirect URL back
+      if (!response.data.redirectUrl) {
+        console.error('Payment response is missing redirectUrl:', response.data);
+        throw new Error('Payment service returned invalid response: missing redirect URL');
       }
       
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Create payment for order ${orderId} error:`, error);
-      throw error;
+      // Provide more detailed error information
+      throw {
+        message: `Payment initialization failed: ${error.message || 'Unknown error'}`,
+        details: error,
+        orderId: orderId
+      };
     }
   },
   
   /**
-   * Verify YOCO payment after checkout
+   * Verify payment after checkout (Yoco implementation)
    * @param reference Payment reference
    * @returns Payment verification result
    */
   verifyPayment: async (reference: string) => {
     try {
+      // Log the verification attempt with the reference
+      console.log(`Starting payment verification for reference: ${reference}`);
+      
       // For direct API access in development, use the full URL
       let url = `/payments/verify?reference=${reference}`;
       let response;
       
-      // Special handling for production environment
+      // Helper function to check if response contains HTML
+      const isHtmlResponse = (data: any): boolean => {
+        return typeof data === 'string' && 
+               (data.includes('<!doctype') || 
+                data.includes('<html') || 
+                data.includes('<!DOCTYPE'));
+      };
+      
+      // Function to process response data safely
+      const safelyProcessResponse = (resp: any): any => {
+        // Check for HTML response before JSON parsing
+        if (resp.headers && resp.headers['content-type'] && 
+            resp.headers['content-type'].includes('text/html')) {
+          console.warn('Received HTML content type from API');
+          throw new Error('Server returned HTML instead of JSON');
+        }
+        
+        // Check if response data is already a string and contains HTML
+        if (isHtmlResponse(resp.data)) {
+          console.warn('Response contains HTML content');
+          throw new Error('Server returned HTML instead of JSON');
+        }
+        
+        return resp.data;
+      };
+      
+      // Multi-method verification with fallbacks
+      // Strategy 1: Try direct HTTPS call with axios
       if (window.location.hostname !== 'localhost') {
         try {
+          console.log('Trying direct HTTPS call to payment verification endpoint');
           response = await axios.get(`https://service.klenhub.co.za/api/payments/verify?reference=${reference}`, {
             headers: { 
+              'Accept': 'application/json',
               'Authorization': `Bearer ${localStorage.getItem('token')}` 
-            }
+            },
+            transformResponse: [(data) => {
+              // Prevent automatic JSON parsing to handle HTML responses
+              if (isHtmlResponse(data)) {
+                console.warn('Received HTML in transform response');
+                throw new Error('Server returned HTML instead of JSON');
+              }
+              try {
+                return JSON.parse(data);
+              } catch (e: unknown) {
+                const error = e as Error;
+                console.warn('JSON parse error:', error.message);
+                return data; // Return raw data if parsing fails
+              }
+            }]
           });
-        } catch (directApiError) {
-          console.warn('Direct API call failed, falling back to relative URL:', directApiError);
-          response = await api.get(url);
+          
+          // Process response safely
+          const data = safelyProcessResponse(response);
+          console.log('Payment verification successful with direct call');
+          return { success: true, data };
+        } catch (directApiError: unknown) {
+          const error = directApiError as Error;
+          console.warn('Direct API call failed:', error.message);
+          // Continue to fallback
         }
-      } else {
-        response = await api.get(url);
       }
       
-      return {
-        success: true,
-        data: response.data
-      };
-    } catch (error) {
+      // Strategy 2: Try with fetch API
+      try {
+        console.log('Trying fetch API call to payment verification endpoint');
+        const token = localStorage.getItem('token');
+        const fetchUrl = window.location.hostname === 'localhost' 
+          ? `${API_URL}${url}` 
+          : `https://service.klenhub.co.za/api/payments/verify?reference=${reference}`;
+        
+        const fetchResponse = await fetch(fetchUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+          }
+        });
+        
+        // Check for HTML content type
+        const contentType = fetchResponse.headers.get('content-type');
+        if (contentType && contentType.includes('text/html')) {
+          console.warn('Fetch received HTML content type');
+          throw new Error('Server returned HTML instead of JSON');
+        }
+        
+        // Try to parse as JSON, but handle text/HTML response
+        const responseText = await fetchResponse.text();
+        if (isHtmlResponse(responseText)) {
+          console.warn('Fetch received HTML response');
+          throw new Error('Server returned HTML instead of JSON');
+        }
+        
+        // Parse JSON manually
+        try {
+          const data = JSON.parse(responseText);
+          console.log('Payment verification successful with fetch API');
+          return { success: true, data };
+        } catch (parseError: unknown) {
+          const error = parseError as Error;
+          console.error('Error parsing JSON response:', error);
+          throw new Error(`JSON parse error: ${error.message}`);
+        }
+      } catch (fetchError: unknown) {
+        const error = fetchError as Error;
+        console.warn('Fetch API call failed:', error.message);
+        // Continue to fallback
+      }
+      
+      // Strategy 3: Last attempt with axios and relative URL
+      try {
+        console.log('Trying axios with relative URL as final fallback');
+        response = await api.get(url, {
+          transformResponse: [(data) => {
+            // Prevent automatic JSON parsing
+            if (isHtmlResponse(data)) {
+              console.warn('Received HTML in final fallback');
+              throw new Error('Server returned HTML instead of JSON');
+            }
+            try {
+              return JSON.parse(data);
+            } catch (e: unknown) {
+              const error = e as Error;
+              console.warn('JSON parse error in final fallback:', error.message);
+              return data;
+            }
+          }]
+        });
+        
+        // Process response safely
+        const data = safelyProcessResponse(response);
+        console.log('Payment verification successful with final fallback');
+        return { success: true, data };
+      } catch (fallbackError: unknown) {
+        const error = fallbackError as Error;
+        console.error('All verification attempts failed:', error.message);
+        throw error;
+      }
+    } catch (err: unknown) {
+      const error = err as { message?: string; response?: { data: any } };
       console.error('Payment verification failed:', error);
+      // Return a more detailed error object
       return {
         success: false,
-        error: 'Payment verification failed'
+        error: error.message || 'Payment verification failed',
+        details: error.response ? error.response.data : null,
+        reference: reference
       };
     }
   },
   
   /**
-   * Get YOCO payment status
+   * Get payment status (Yoco implementation)
    * @param reference Payment reference
    * @returns Payment status
    */
@@ -926,7 +1098,7 @@ export const paymentService = {
   },
   
   /**
-   * Handle YOCO payment callback
+   * Handle payment callback (Yoco implementation)
    * @param reference Payment reference
    * @returns Callback handling result
    */
